@@ -119,6 +119,12 @@
         };
         const normalizeCategory = (cat) => CATEGORY_ALIASES[cat] || cat;
 
+        // タグ正規化（前後スペース除去）
+        const normalizeTag = (t) => {
+            if (t === null || t === undefined) return '';
+            return String(t).trim();
+        };
+
         const CATEGORY_ICONS = {
             'PC': Laptop,
             'モバイル': Smartphone,
