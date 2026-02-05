@@ -572,10 +572,11 @@
                 initData();
             }, []);
 
-            const [activeTab, setActiveTab] = useState('active');
+            const [activeTab, setActiveTab] = useState('favorite');
             const [searchQuery, setSearchQuery] = useState('');
             const [sortConfig, setSortConfig] = useState({ key: 'purchaseDate', direction: 'desc' });
             
+            const [filterTags, setFilterTags] = useState([]);
             const [isFormModalOpen, setIsFormModalOpen] = useState(false);
             const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
             const [selectedItem, setSelectedItem] = useState(null);
@@ -820,6 +821,27 @@
                         normalizeCategory(item.category).toLowerCase().includes(q)
                     );
                 }
+if (filterTags.length) {
+    const byType = filterTags.reduce((acc, t) => {
+        if (!acc[t.type]) acc[t.type] = new Set();
+        acc[t.type].add(t.value);
+        return acc;
+    }, {});
+    result = result.filter(item => {
+        const cat = normalizeCategory(item.category);
+        for (const type in byType) {
+            const set = byType[type];
+            if (type === 'category') {
+                if (!set.has(cat)) return false; // OR within category
+            } else {
+                // reserved for future tag types
+                if (!set.has(item[type])) return false;
+            }
+        }
+        return true;
+    });
+}
+
                 if (activeTab === 'favorite') {
                     const idxMap = new Map(favOrder.map((id, idx) => [id, idx]));
                     result.sort((a, b) => {
@@ -845,7 +867,7 @@
                     });
                 }
                 return result;
-            }, [items, activeTab, searchQuery, sortConfig, favOrder]);
+            }, [items, activeTab, searchQuery, filterTags, sortConfig, favOrder]);
 
             const handleAddItem = () => {
                 setEditingItem(null);
@@ -885,11 +907,22 @@
             };
 
             const toggleSort = (key) => {
-                setSortConfig(current => ({
-                    key,
-                    direction: current.key === key && current.direction === 'desc' ? 'asc' : 'desc'
-                }));
-            };
+    setSortConfig(current => ({
+        key,
+        direction: current.key === key && current.direction === 'desc' ? 'asc' : 'desc'
+    }));
+};
+
+const addTag = (type, value, label) => {
+    setFilterTags(prev => {
+        if (prev.some(t => t.type === type && t.value === value)) return prev;
+        return [...prev, { type, value, label }];
+    });
+};
+
+const removeTag = (type, value) => {
+    setFilterTags(prev => prev.filter(t => !(t.type === type && t.value === value)));
+};
 
             const tabs = [
                 { id: 'favorite', label: 'お気に入り' },
@@ -907,20 +940,50 @@
                 <div className="min-h-screen bg-slate-50 text-gray-800 font-sans pb-24">
                     {/* --- Top App Bar --- */}
                     <header className="bg-white/80 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200">
-                        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <h1 className="text-xl font-bold tracking-tight text-gray-900">Monory</h1>
-                            </div>
-                            <div className="flex gap-2">
-                                <button onClick={() => setIsSettingsModalOpen(true)} className="bg-slate-100 text-slate-600 p-2 rounded-full hover:bg-slate-200 transition-colors">
-                                    <Settings size={20} />
-                                </button>
-                                <button onClick={handleAddItem} className="bg-brand-600 text-white p-2 rounded-full shadow-lg shadow-brand-200 hover:bg-brand-700 transition-transform active:scale-95">
-                                    <Plus size={24} />
-                                </button>
-                            </div>
-                        </div>
-                        <div className="max-w-3xl mx-auto">
+                        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
+    <h1 className="text-xl font-bold tracking-tight text-gray-900">Monory</h1>
+
+    <div className="relative flex-1 group">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-500 transition-colors" size={18} />
+        <input type="text" placeholder="アイテムを検索..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm transition-all shadow-sm" />
+    </div>
+
+    <button onClick={() => toggleSort('purchaseDate')} className={`px-4 py-2.5 bg-white border border-slate-200 rounded-xl flex items-center gap-2 text-sm font-medium shadow-sm transition-all ${sortConfig.key === 'purchaseDate' ? 'text-brand-600 bg-brand-50 border-brand-200 ring-2 ring-brand-500/20' : 'text-gray-600 hover:bg-gray-50'}`}>
+        <Filter size={16} />
+        <span className="hidden sm:inline">購入日順</span>
+    </button>
+
+    <div className="flex gap-2 shrink-0">
+        <button onClick={() => setIsSettingsModalOpen(true)} className="bg-slate-100 text-slate-600 p-2 rounded-full hover:bg-slate-200 transition-colors">
+            <Settings size={20} />
+        </button>
+        <button onClick={handleAddItem} className="bg-brand-600 text-white p-2 rounded-full shadow-lg shadow-brand-200 hover:bg-brand-700 transition-transform active:scale-95">
+            <Plus size={24} />
+        </button>
+    </div>
+</div>
+
+{filterTags.length > 0 && (
+    <div className="max-w-3xl mx-auto px-4 pb-2">
+        <div className="flex flex-wrap gap-2">
+            {filterTags.map(tag => (
+                <span key={`${tag.type}:${tag.value}`} className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full text-slate-600 bg-slate-100 border border-slate-200">
+                    {tag.label}
+                    <button
+                        onClick={() => removeTag(tag.type, tag.value)}
+                        className="p-0.5 rounded-full hover:bg-slate-200 transition-colors"
+                        aria-label="タグを外す"
+                    >
+                        <X size={12} />
+                    </button>
+                </span>
+            ))}
+        </div>
+    </div>
+)}
+
+<div className="max-w-3xl mx-auto">
+
                             <div className="flex overflow-x-auto hide-scrollbar px-4 gap-6">
                                 {tabs.map(tab => (
                                     <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`pb-3 border-b-2 transition-colors whitespace-nowrap text-sm font-medium ${activeTab === tab.id ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
@@ -933,17 +996,6 @@
 
                     {/* --- Main Content --- */}
                     <main className="max-w-3xl mx-auto px-4 py-6 space-y-4">
-                        {/* Search & Filter Bar */}
-                        <div className="flex gap-3">
-                            <div className="relative flex-1 group">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-500 transition-colors" size={18} />
-                                <input type="text" placeholder="アイテムを検索..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm transition-all shadow-sm" />
-                            </div>
-                            <button onClick={() => toggleSort('purchaseDate')} className={`px-4 py-2.5 bg-white border border-slate-200 rounded-xl flex items-center gap-2 text-sm font-medium shadow-sm transition-all ${sortConfig.key === 'purchaseDate' ? 'text-brand-600 bg-brand-50 border-brand-200 ring-2 ring-brand-500/20' : 'text-gray-600 hover:bg-gray-50'}`}>
-                                <Filter size={16} />
-                                <span className="hidden sm:inline">購入日順</span>
-                            </button>
-                        </div>
 
                         {/* Item List */}
                         <div className="flex flex-col gap-3">
@@ -969,15 +1021,6 @@
                                             <div className="flex items-center justify-between gap-2 mb-1">
                                                 <div className="flex items-center gap-2">
                                                     <p className="text-[10px] text-brand-600 font-bold uppercase tracking-wide truncate">{item.brand}</p>
-                                                    <span 
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setSearchQuery(item.category);
-                                                        }}
-                                                        className="text-[9px] px-1.5 py-0.5 rounded text-slate-500 bg-slate-100 border border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors"
-                                                    >
-                                                        {normalizeCategory(item.category)}
-                                                    </span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     {(activeTab === 'all') && <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium border ${statusConfig.bg} ${statusConfig.color} ${statusConfig.border}`}>{statusConfig.label}</span>}
@@ -1004,6 +1047,15 @@
                                                         {item.favorite ? '★' : '☆'}
                                                     </span>
                                                     <span className="font-semibold text-gray-700 text-xs">{formatCurrency(item.price)}</span>
+                                                    <span
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            addTag('category', normalizeCategory(item.category), normalizeCategory(item.category));
+                                                        }}
+                                                        className="text-[9px] px-1.5 py-0.5 rounded text-slate-500 bg-slate-100 border border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors"
+                                                    >
+                                                        {normalizeCategory(item.category)}
+                                                    </span>
                                                 </div>
                                                 <ChevronRight size={14} className="text-gray-300" />
                                             </div>
