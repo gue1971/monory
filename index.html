@@ -1,716 +1,1043 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Monory</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monory</title>
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
 
-  <!--
-    Monory 最終版:
-    - コード内の命名を人間が読んで分かる形に整理
-    - LocalStorage: 新キーに保存 / 旧キー(monolog_*)も読み込み互換
-    - お気に入り並べ替え: PC=DnD / スマホ=「≡」長押し→ドラッグ（Pointer対応）
-    - 起動初期タブ: お気に入りがあればお気に入りを初期表示
-  -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Helvetica Neue', 'Arial', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Meiryo', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    },
+                    aspectRatio: {
+                        'square': '1 / 1',
+                    }
+                }
+            }
+        }
+    </script>
 
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
-
-  <style>
-    :root {
-      --bg: #0b0f1a;
-      --card: #111827;
-      --muted: #94a3b8;
-      --text: #e5e7eb;
-      --accent: #60a5fa;
-      --accent2: #34d399;
-      --danger: #fb7185;
-      --border: rgba(148, 163, 184, 0.22);
-      --shadow: 0 6px 18px rgba(0,0,0,0.25);
-      --r: 14px;
-    }
-
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans JP";
-      background: radial-gradient(1200px 700px at 20% 10%, rgba(96,165,250,0.12), transparent 60%),
-                  radial-gradient(1200px 700px at 80% 30%, rgba(52,211,153,0.10), transparent 60%),
-                  var(--bg);
-      color: var(--text);
-    }
-
-    .app {
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 16px;
-    }
-
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 8px 4px 14px;
-    }
-
-    .brand {
-      display: flex;
-      align-items: baseline;
-      gap: 10px;
-    }
-
-    .brand h1 {
-      margin: 0;
-      font-size: 18px;
-      letter-spacing: 0.2px;
-    }
-
-    .brand .sub {
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .toolbar {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    button {
-      appearance: none;
-      border: 1px solid var(--border);
-      background: rgba(17, 24, 39, 0.7);
-      color: var(--text);
-      border-radius: 12px;
-      padding: 10px 12px;
-      cursor: pointer;
-      box-shadow: var(--shadow);
-      font-size: 13px;
-    }
-
-    button:hover { border-color: rgba(96,165,250,0.5); }
-    button:active { transform: translateY(1px); }
-
-    .tabs {
-      display: flex;
-      gap: 8px;
-      margin: 8px 0 12px;
-    }
-
-    .tab {
-      flex: 1;
-      border-radius: 12px;
-      padding: 10px 12px;
-      text-align: center;
-      border: 1px solid var(--border);
-      background: rgba(17,24,39,0.45);
-      color: var(--muted);
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .tab.active {
-      color: var(--text);
-      border-color: rgba(96,165,250,0.55);
-      background: rgba(96,165,250,0.12);
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 10px;
-    }
-
-    @media (min-width: 760px) {
-      .grid { grid-template-columns: 1fr 1fr; }
-    }
-
-    .card {
-      border: 1px solid var(--border);
-      border-radius: var(--r);
-      background: rgba(17,24,39,0.55);
-      padding: 12px;
-      box-shadow: var(--shadow);
-    }
-
-    .card h2 {
-      margin: 0 0 10px;
-      font-size: 14px;
-      color: var(--muted);
-      font-weight: 600;
-      letter-spacing: 0.1px;
-    }
-
-    .list { display: flex; flex-direction: column; gap: 8px; }
-
-    .item {
-      border: 1px solid rgba(148,163,184,0.18);
-      border-radius: 12px;
-      padding: 10px 10px;
-      background: rgba(2,6,23,0.25);
-      display: grid;
-      grid-template-columns: 1fr auto;
-      align-items: center;
-      gap: 10px;
-      touch-action: none; /* pointerドラッグを安定させる */
-    }
-
-    .item.dragging {
-      opacity: 0.65;
-      border-color: rgba(96,165,250,0.65);
-      background: rgba(96,165,250,0.10);
-    }
-
-    .item .name {
-      font-size: 14px;
-      line-height: 1.3;
-    }
-
-    .item .meta {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 3px;
-    }
-
-    .actions {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .iconBtn {
-      width: 38px;
-      height: 38px;
-      padding: 0;
-      display: grid;
-      place-items: center;
-      border-radius: 12px;
-      border: 1px solid rgba(148,163,184,0.22);
-      background: rgba(17,24,39,0.55);
-      box-shadow: var(--shadow);
-    }
-
-    .iconBtn.fav { border-color: rgba(52,211,153,0.45); }
-    .iconBtn.del { border-color: rgba(251,113,133,0.45); }
-
-    .handle {
-      width: 38px;
-      height: 38px;
-      display: grid;
-      place-items: center;
-      border-radius: 12px;
-      border: 1px dashed rgba(148,163,184,0.28);
-      color: rgba(148,163,184,0.85);
-      background: rgba(17,24,39,0.35);
-      font-size: 16px;
-      user-select: none;
-    }
-
-    .hint {
-      margin-top: 10px;
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    .row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    input, select {
-      border: 1px solid var(--border);
-      background: rgba(17,24,39,0.55);
-      color: var(--text);
-      border-radius: 12px;
-      padding: 10px 12px;
-      font-size: 13px;
-      outline: none;
-    }
-
-    input::placeholder { color: rgba(148,163,184,0.65); }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      border: 1px solid rgba(148,163,184,0.18);
-      padding: 6px 10px;
-      border-radius: 999px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .pill strong { color: var(--text); font-weight: 600; }
-
-    .footer {
-      margin-top: 16px;
-      color: var(--muted);
-      font-size: 12px;
-      opacity: 0.9;
-    }
-  </style>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+        body {
+            background-color: #f8fafc;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
 </head>
 <body>
-  <div id="root"></div>
+    <div id="root"></div>
 
-  <script type="text/babel">
-    const { useEffect, useMemo, useRef, useState } = React;
+    <script type="text/babel">
+        const { useState, useMemo, useEffect, useRef } = React;
 
-    /**
-     * =========================
-     * 永続化キー（Monory）
-     * =========================
-     * 旧キー互換:
-     *   - monolog_data
-     *   - monolog_fav_order
-     * 新キー:
-     *   - monory_items
-     *   - monory_favorite_order
-     */
-    const STORAGE_KEYS = {
-      items: {
-        current: 'monory_items',
-        legacy: 'monolog_data',
-      },
-      favoriteOrder: {
-        current: 'monory_favorite_order',
-        legacy: 'monolog_fav_order',
-      },
-    };
+        // --- Icons ---
+        const IconBase = ({ size = 24, className = "", children }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
 
-    function safeJsonParse(text, fallback) {
-      try {
-        return JSON.parse(text);
-      } catch {
-        return fallback;
-      }
-    }
+        // Category Icons
+        const Laptop = (props) => <IconBase {...props}><rect width="18" height="12" x="3" y="4" rx="2" ry="2"/><line x1="2" x2="22" y1="20" y2="20"/></IconBase>;
+        const Smartphone = (props) => <IconBase {...props}><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></IconBase>;
+        const Utensils = (props) => <IconBase {...props}><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></IconBase>;
+        const Zap = (props) => <IconBase {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></IconBase>;
+        const Tv = (props) => <IconBase {...props}><rect width="20" height="15" x="2" y="7" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></IconBase>;
+        const Book = (props) => <IconBase {...props}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></IconBase>;
+        const ShoppingBag = (props) => <IconBase {...props}><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></IconBase>;
+        const Car = (props) => <IconBase {...props}><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></IconBase>;
+        const Archive = (props) => <IconBase {...props}><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></IconBase>;
 
-    function loadFromLocalStorage() {
-      const rawItems =
-        localStorage.getItem(STORAGE_KEYS.items.current)
-        ?? localStorage.getItem(STORAGE_KEYS.items.legacy);
+        // UI Icons
+        const Search = (props) => <IconBase {...props}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></IconBase>;
+        const Filter = (props) => <IconBase {...props}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></IconBase>;
+        const Plus = (props) => <IconBase {...props}><path d="M5 12h14"/><path d="M12 5v14"/></IconBase>;
+        const X = (props) => <IconBase {...props}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></IconBase>;
+        const ChevronRight = (props) => <IconBase {...props}><path d="m9 18 6-6-6-6"/></IconBase>;
+        const Calendar = (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></IconBase>;
+        const Trash2 = (props) => <IconBase {...props}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></IconBase>;
+        const CheckCircle2 = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></IconBase>;
+        const Box = (props) => <IconBase {...props}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" x2="12" y1="22.08" y2="12"/></IconBase>;
+        const Edit = (props) => <IconBase {...props}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></IconBase>;
+        const Image = (props) => <IconBase {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></IconBase>;
+        const Download = (props) => <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></IconBase>;
+        const Upload = (props) => <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></IconBase>;
+        const Settings = (props) => <IconBase {...props}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></IconBase>;
+        const UploadCloud = (props) => <IconBase {...props}><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></IconBase>;
+        const FolderOpen = (props) => <IconBase {...props}><path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"/></IconBase>;
+        const AlertTriangle = (props) => <IconBase {...props}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></IconBase>;
+        const RefreshCw = (props) => <IconBase {...props}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></IconBase>;
 
-      const rawFavOrder =
-        localStorage.getItem(STORAGE_KEYS.favoriteOrder.current)
-        ?? localStorage.getItem(STORAGE_KEYS.favoriteOrder.legacy);
+        // --- Category Definitions (8 Categories) ---
+        // ※カテゴリ名の変更（旧→新）
+        const CATEGORY_ALIASES = {
+            '生活・理美容家電': '理美容',
+            '理美容家電': '理美容',
+            '乗り物・その他': 'その他',
+            '書斎・事務': '生活家電',
 
-      const items = rawItems ? safeJsonParse(rawItems, []) : [];
-      const favoriteOrder = rawFavOrder ? safeJsonParse(rawFavOrder, []) : [];
-
-      return { items, favoriteOrder };
-    }
-
-    function saveItems(items) {
-      localStorage.setItem(STORAGE_KEYS.items.current, JSON.stringify(items));
-    }
-
-    function saveFavoriteOrder(favoriteOrder) {
-      localStorage.setItem(STORAGE_KEYS.favoriteOrder.current, JSON.stringify(favoriteOrder));
-    }
-
-    function unique(array) {
-      return Array.from(new Set(array));
-    }
-
-    function App() {
-      const [{ items, favoriteOrder }, setData] = useState(() => loadFromLocalStorage());
-
-      // タブ: 'active' | 'favorites'
-      const [activeTab, setActiveTab] = useState('active');
-
-      // 初期タブ: お気に入りが1件以上なら favorites
-      useEffect(() => {
-        const hasAnyFavorite = items.some(it => !!it.isFavorite);
-        setActiveTab(hasAnyFavorite ? 'favorites' : 'active');
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, []);
-
-      // 永続化
-      useEffect(() => saveItems(items), [items]);
-      useEffect(() => saveFavoriteOrder(favoriteOrder), [favoriteOrder]);
-
-      // favoriteOrder を整備（お気に入りIDだけ保持）
-      useEffect(() => {
-        const favoriteIds = items.filter(it => it.isFavorite).map(it => it.id);
-        const next = unique(favoriteOrder.filter(id => favoriteIds.includes(id)).concat(favoriteIds));
-        if (JSON.stringify(next) !== JSON.stringify(favoriteOrder)) {
-          setData(prev => ({ ...prev, favoriteOrder: next }));
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, [items]);
-
-      const favoriteItems = useMemo(() => {
-        const byId = new Map(items.map(it => [it.id, it]));
-        const ordered = favoriteOrder.map(id => byId.get(id)).filter(Boolean);
-        const rest = items.filter(it => it.isFavorite && !favoriteOrder.includes(it.id));
-        return ordered.concat(rest);
-      }, [items, favoriteOrder]);
-
-      const activeItems = useMemo(() => items.filter(it => it.isActive), [items]);
-
-      function addItem(name) {
-        const trimmed = (name || '').trim();
-        if (!trimmed) return;
-        const id = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
-        setData(prev => ({
-          ...prev,
-          items: [
-            {
-              id,
-              name: trimmed,
-              category: '未分類',
-              isActive: true,
-              isFavorite: false,
-              createdAt: new Date().toISOString(),
-            },
-            ...prev.items,
-          ],
-        }));
-      }
-
-      function toggleFavorite(id) {
-        setData(prev => {
-          const nextItems = prev.items.map(it => it.id === id ? { ...it, isFavorite: !it.isFavorite } : it);
-          const isFavNow = nextItems.find(it => it.id === id)?.isFavorite;
-
-          let nextFavOrder = prev.favoriteOrder;
-          if (isFavNow) {
-            nextFavOrder = unique([id, ...prev.favoriteOrder]);
-          } else {
-            nextFavOrder = prev.favoriteOrder.filter(x => x !== id);
-          }
-
-          return { ...prev, items: nextItems, favoriteOrder: nextFavOrder };
-        });
-      }
-
-      function toggleActive(id) {
-        setData(prev => ({
-          ...prev,
-          items: prev.items.map(it => it.id === id ? { ...it, isActive: !it.isActive } : it),
-        }));
-      }
-
-      function removeItem(id) {
-        setData(prev => ({
-          ...prev,
-          items: prev.items.filter(it => it.id !== id),
-          favoriteOrder: prev.favoriteOrder.filter(x => x !== id),
-        }));
-      }
-
-      // =========================
-      // お気に入り並べ替え（スマホ対応）
-      // =========================
-      const dragStateRef = useRef({
-        pointerId: null,
-        draggingId: null,
-        startIndex: -1,
-        overIndex: -1,
-        isDragging: false,
-        longPressTimer: null,
-        armed: false,
-      });
-
-      function reorderFavoriteOrder(fromIndex, toIndex) {
-        if (fromIndex === toIndex) return;
-        setData(prev => {
-          const order = [...prev.favoriteOrder];
-          const item = order[fromIndex];
-          order.splice(fromIndex, 1);
-          order.splice(toIndex, 0, item);
-          return { ...prev, favoriteOrder: order };
-        });
-      }
-
-      // PC: HTML5 Drag & Drop
-      function onDragStartHtml5(e, id) {
-        e.dataTransfer.setData('text/plain', id);
-        e.dataTransfer.effectAllowed = 'move';
-      }
-
-      function onDragOverHtml5(e) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-      }
-
-      function onDropHtml5(e, dropIndex) {
-        e.preventDefault();
-        const draggedId = e.dataTransfer.getData('text/plain');
-        const fromIndex = favoriteOrder.indexOf(draggedId);
-        if (fromIndex >= 0) reorderFavoriteOrder(fromIndex, dropIndex);
-      }
-
-      // スマホ: Pointer長押し→ドラッグ
-      const [reorderUiTick, setReorderUiTick] = useState(0);
-
-      function onPointerDownHandle(e, id, index) {
-        const st = dragStateRef.current;
-        st.pointerId = e.pointerId;
-        st.draggingId = id;
-        st.startIndex = index;
-        st.overIndex = index;
-        st.isDragging = false;
-
-        clearTimeout(st.longPressTimer);
-        st.longPressTimer = setTimeout(() => {
-          st.isDragging = true;
-          st.armed = true;
-          try { e.target.setPointerCapture(e.pointerId); } catch {}
-          if (navigator.vibrate) navigator.vibrate(12);
-          setReorderUiTick(t => t + 1);
-        }, 220);
-      }
-
-      function onPointerMoveItem(e, hoverIndex) {
-        const st = dragStateRef.current;
-        if (!st.armed || !st.isDragging) return;
-        if (st.draggingId == null) return;
-        st.overIndex = hoverIndex;
-        setReorderUiTick(t => t + 1);
-      }
-
-      function onPointerUpAny() {
-        const st = dragStateRef.current;
-        clearTimeout(st.longPressTimer);
-
-        if (st.armed && st.isDragging) {
-          const from = st.startIndex;
-          const to = st.overIndex;
-          if (from >= 0 && to >= 0) reorderFavoriteOrder(from, to);
-        }
-
-        st.pointerId = null;
-        st.draggingId = null;
-        st.startIndex = -1;
-        st.overIndex = -1;
-        st.isDragging = false;
-        st.armed = false;
-        setReorderUiTick(t => t + 1);
-      }
-
-      useEffect(() => {
-        window.addEventListener('pointerup', onPointerUpAny);
-        window.addEventListener('pointercancel', onPointerUpAny);
-        return () => {
-          window.removeEventListener('pointerup', onPointerUpAny);
-          window.removeEventListener('pointercancel', onPointerUpAny);
+            'PC・ワークステーション': 'PC',
+            'PC・ワークスペース': 'PC',
+            'モバイル・ガジェット': 'モバイル',
+            'キッチン家電': 'キッチン',
+            'AV・エンタメ': 'オーディオ',
+            'ファッション・もちもの': 'ファッション',
+            'ファッション・持ち物': 'ファッション',
         };
-      }, []);
+        const normalizeCategory = (cat) => CATEGORY_ALIASES[cat] || cat;
 
-      // =========================
-      // バックアップ（Monory名）
-      // =========================
-      function exportBackup() {
-        const payload = {
-          version: 2,
-          exportedAt: new Date().toISOString(),
-          items,
-          favoriteOrder,
+        const CATEGORY_ICONS = {
+            'PC': Laptop,
+            'モバイル': Smartphone,
+            'キッチン': Utensils,
+            '理美容': Zap,
+            '生活家電': Zap,
+            'オーディオ': Tv,
+            'エンタメ': Tv,
+            'ファッション': ShoppingBag,
+            'その他': Car,
         };
-        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-        const a = document.createElement('a');
-        const now = new Date();
-        const y = now.getFullYear();
-        const m = String(now.getMonth() + 1).padStart(2, '0');
-        const d = String(now.getDate()).padStart(2, '0');
-        const hh = String(now.getHours()).padStart(2, '0');
-        const mm = String(now.getMinutes()).padStart(2, '0');
-        a.download = `monory_backup_${y}${m}${d}_${hh}${mm}.json`;
-        a.href = URL.createObjectURL(blob);
-        a.click();
-        URL.revokeObjectURL(a.href);
-      }
 
-      function importBackup(file) {
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          const text = String(reader.result || '');
-          const data = safeJsonParse(text, null);
-          if (!data) return;
-
-          if (data.version === 2 && Array.isArray(data.items)) {
-            setData({
-              items: data.items,
-              favoriteOrder: Array.isArray(data.favoriteOrder) ? data.favoriteOrder : [],
-            });
-            return;
-          }
-
-          // 旧形式: items配列のみ
-          if (Array.isArray(data)) {
-            setData({ items: data, favoriteOrder: [] });
-          }
+        const STATUS_CONFIG = {
+            active: { id: 'active', label: '使用中', icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+            archived: { id: 'archived', label: '保管中', icon: Box, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
+            disposed: { id: 'disposed', label: '廃棄/譲渡', icon: Trash2, color: 'text-slate-500', bg: 'bg-slate-100', border: 'border-slate-200' },
         };
-        reader.readAsText(file);
-      }
 
-      // =========================
-      // UI
-      // =========================
-      const [newName, setNewName] = useState('');
-      const fileInputRef = useRef(null);
+        // --- Utility Functions ---
+        const formatCurrency = (amount) => {
+            return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(amount);
+        };
 
-      const tabCounts = useMemo(() => {
-        const fav = items.filter(it => it.isFavorite).length;
-        const act = items.filter(it => it.isActive).length;
-        return { fav, act, total: items.length };
-      }, [items]);
+        // --- Components ---
 
-      return (
-        <div className="app">
-          <header>
-            <div className="brand">
-              <h1>Monory</h1>
-              <div className="sub">お気に入り整理・使用中管理</div>
-            </div>
-            <div className="toolbar">
-              <button onClick={exportBackup}>バックアップを書き出し</button>
-              <button onClick={() => fileInputRef.current?.click()}>バックアップを読み込み</button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="application/json"
-                style={{ display: 'none' }}
-                onChange={(e) => importBackup(e.target.files?.[0])}
-              />
-            </div>
-          </header>
-
-          <div className="tabs">
-            <div className={"tab " + (activeTab === 'active' ? 'active' : '')} onClick={() => setActiveTab('active')}>
-              使用中 <span className="pill"><strong>{tabCounts.act}</strong></span>
-            </div>
-            <div className={"tab " + (activeTab === 'favorites' ? 'active' : '')} onClick={() => setActiveTab('favorites')}>
-              お気に入り <span className="pill"><strong>{tabCounts.fav}</strong></span>
-            </div>
-          </div>
-
-          <div className="grid">
-            <div className="card">
-              <h2>追加</h2>
-              <div className="row">
-                <input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="モノの名前"
-                  style={{ flex: 1, minWidth: 180 }}
-                />
-                <button onClick={() => { addItem(newName); setNewName(''); }}>追加</button>
-              </div>
-              <div className="hint">
-                追加すると「使用中」に入るよ。お気に入りにするとお気に入りタブに並ぶ。
-              </div>
-            </div>
-
-            <div className="card">
-              <h2>状態</h2>
-              <div className="row">
-                <span className="pill">総数 <strong>{tabCounts.total}</strong></span>
-                <span className="pill">使用中 <strong>{tabCounts.act}</strong></span>
-                <span className="pill">お気に入り <strong>{tabCounts.fav}</strong></span>
-              </div>
-              <div className="hint">
-                ※ 並び替え順は端末ローカル保存（別端末へはバックアップで移す）。
-              </div>
-            </div>
-
-            {activeTab === 'active' ? (
-              <div className="card" style={{ gridColumn: '1 / -1' }}>
-                <h2>使用中リスト</h2>
-                <div className="list">
-                  {activeItems.length === 0 && (
-                    <div className="hint">使用中は空じゃね。</div>
-                  )}
-                  {activeItems.map(it => (
-                    <div key={it.id} className="item">
-                      <div>
-                        <div className="name">{it.name}</div>
-                        <div className="meta">{it.category || '未分類'} · {it.createdAt?.slice(0,10) || ''}</div>
-                      </div>
-                      <div className="actions">
-                        <button className="iconBtn fav" onClick={() => toggleFavorite(it.id)} title="お気に入り">
-                          {it.isFavorite ? '★' : '☆'}
-                        </button>
-                        <button className="iconBtn" onClick={() => toggleActive(it.id)} title="使用中切替">
-                          {it.isActive ? '⏸' : '▶'}
-                        </button>
-                        <button className="iconBtn del" onClick={() => removeItem(it.id)} title="削除">✕</button>
-                      </div>
+        const Modal = ({ isOpen, onClose, title, children }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                            <h3 className="text-lg font-bold text-gray-800">{title}</h3>
+                            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                                <X size={20} className="text-gray-500" />
+                            </button>
+                        </div>
+                        <div className="p-0 overflow-y-auto flex-1">
+                            {children}
+                        </div>
                     </div>
-                  ))}
                 </div>
-              </div>
-            ) : (
-              <div className="card" style={{ gridColumn: '1 / -1' }}>
-                <h2>お気に入り（並べ替え）</h2>
-                <div className="hint">
-                  PC: 行をドラッグ。スマホ: 左の「≡」を長押ししてから上下に移動。
-                </div>
-                <div className="list">
-                  {favoriteItems.length === 0 && (
-                    <div className="hint">お気に入りはまだ無いみたい。</div>
-                  )}
-                  {favoriteItems.map((it, index) => {
-                    const st = dragStateRef.current;
-                    const isDragging = st.isDragging && st.draggingId === it.id;
-                    const isOver = st.isDragging && st.overIndex === index;
+            );
+        };
 
-                    return (
-                      <div
-                        key={it.id}
-                        className={'item ' + (isDragging ? 'dragging' : '')}
-                        draggable
-                        onDragStart={(e) => onDragStartHtml5(e, it.id)}
-                        onDragOver={onDragOverHtml5}
-                        onDrop={(e) => onDropHtml5(e, index)}
-                        onPointerMove={(e) => onPointerMoveItem(e, index)}
-                        style={isOver ? { borderColor: 'rgba(96,165,250,0.7)' } : null}
-                      >
-                        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                          <div
-                            className="handle"
-                            title="長押しで並べ替え"
-                            onPointerDown={(e) => onPointerDownHandle(e, it.id, index)}
-                          >
-                            ≡
-                          </div>
-                          <div>
-                            <div className="name">{it.name}</div>
-                            <div className="meta">{it.category || '未分類'}</div>
-                          </div>
+        const ItemImage = ({ item, size = "md", className = "", objectFit = "cover" }) => {
+            // Default to 'その他' or specific icon if category matches directly
+            const Icon = CATEGORY_ICONS[normalizeCategory(item.category)] || Archive;
+            const hasImage = !!item.imageUrl;
+            const iconSize = size === "lg" ? 80 : size === "sm" ? 20 : 32;
+
+            const handleImageError = (e) => {
+                e.target.style.display = 'none';
+                e.target.parentElement.classList.add('image-error-fallback');
+            };
+
+            return (
+                <div className={`aspect-square relative overflow-hidden bg-slate-100 flex items-center justify-center ${className}`}>
+                    {hasImage ? (
+                        <>
+                            <img 
+                                src={item.imageUrl} 
+                                alt={item.name} 
+                                className={`w-full h-full object-${objectFit}`} 
+                                onError={handleImageError}
+                            />
+                            <div className="hidden image-error-fallback-icon text-slate-300 absolute inset-0 flex items-center justify-center">
+                                <Icon size={iconSize} strokeWidth={1.5} />
+                            </div>
+                        </>
+                    ) : (
+                        <div className="text-slate-300">
+                            <Icon size={iconSize} strokeWidth={1.5} />
                         </div>
-                        <div className="actions">
-                          <button className="iconBtn fav" onClick={() => toggleFavorite(it.id)} title="お気に入り">★</button>
-                          <button className="iconBtn" onClick={() => toggleActive(it.id)} title="使用中切替">
-                            {it.isActive ? '⏸' : '▶'}
-                          </button>
-                          <button className="iconBtn del" onClick={() => removeItem(it.id)} title="削除">✕</button>
+                    )}
+                </div>
+            );
+        };
+
+        const ItemForm = ({ initialValues, onSubmit, onCancel }) => {
+            const [formData, setFormData] = useState({
+                category: 'その他',
+                brand: '',
+                name: '',
+                price: '',
+                purchaseDate: '',
+                status: 'active',
+                memo: '',
+                imageUrl: '',
+                ...(initialValues ? { ...initialValues, category: normalizeCategory(initialValues.category) } : {})
+            });
+            const [isDragging, setIsDragging] = useState(false);
+            const fileInputRef = useRef(null);
+
+            const isEdit = !!initialValues;
+
+            const handleChange = (e) => {
+                const { name, value } = e.target;
+                setFormData(prev => ({ ...prev, [name]: value }));
+            };
+
+            const processFile = (file) => {
+                if (file) {
+                    const relativePath = `images/${file.name}`;
+                    setFormData(prev => ({ ...prev, imageUrl: relativePath }));
+                }
+            };
+
+            const handleDrop = (e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                const file = e.dataTransfer.files[0];
+                processFile(file);
+            };
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                setIsDragging(true);
+            };
+
+            const handleDragLeave = (e) => {
+                e.preventDefault();
+                setIsDragging(false);
+            };
+
+            const handleFileSelect = (e) => {
+                const file = e.target.files[0];
+                processFile(file);
+            };
+
+            const handleRemoveImage = () => {
+                setFormData(prev => ({ ...prev, imageUrl: '' }));
+                if (fileInputRef.current) fileInputRef.current.value = '';
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                onSubmit({
+                    ...formData,
+                    category: normalizeCategory(formData.category),
+                    id: formData.id || Date.now().toString(),
+                    price: Number(formData.price) || 0
+                });
+            };
+
+            return (
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">カテゴリ</label>
+                            <select name="category" value={formData.category} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
+                                {Object.keys(CATEGORY_ICONS).map(k => <option key={k} value={k}>{k}</option>)}
+                            </select>
                         </div>
-                      </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">ステータス</label>
+                            <select name="status" value={formData.status} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
+                                {Object.keys(STATUS_CONFIG).map(k => <option key={k} value={k}>{STATUS_CONFIG[k].label}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">ブランド / メーカー</label>
+                        <input type="text" name="brand" value={formData.brand} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" placeholder="Apple, Sony, etc." required />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">製品名</label>
+                        <input type="text" name="name" value={formData.name} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" placeholder="iPhone 15, etc." required />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">購入価格 (円)</label>
+                            <input type="number" name="price" value={formData.price} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" placeholder="0" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">購入日</label>
+                            <input type="date" name="purchaseDate" value={formData.purchaseDate} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" />
+                        </div>
+                    </div>
+
+                    {/* Image Drag & Drop Area (File Path Link Mode) */}
+                    <div>
+                        <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-medium text-gray-500">画像ファイル</label>
+                            <span className="text-[10px] text-amber-600 font-medium flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-full">
+                                <FolderOpen size={10} /> imagesフォルダに保存してください
+                            </span>
+                        </div>
+                        
+                        {!formData.imageUrl ? (
+                            <div 
+                                onClick={() => fileInputRef.current?.click()}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
+                                className={`
+                                    w-full h-32 border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all
+                                    ${isDragging ? 'border-brand-500 bg-brand-50' : 'border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-gray-300'}
+                                `}
+                            >
+                                <FolderOpen size={32} className={isDragging ? 'text-brand-500' : 'text-gray-400'} />
+                                <p className={`mt-2 text-xs font-medium ${isDragging ? 'text-brand-600' : 'text-gray-500'} text-center`}>
+                                    画像ファイルをドラッグ＆ドロップ<br/>
+                                    <span className="text-[10px] text-gray-400 font-normal">ファイル名のみ取得してリンクします</span>
+                                </p>
+                                <input 
+                                    type="file" 
+                                    ref={fileInputRef} 
+                                    className="hidden" 
+                                    accept="image/*" 
+                                    onChange={handleFileSelect} 
+                                />
+                            </div>
+                        ) : (
+                            <div className="relative w-full h-48 bg-slate-100 rounded-xl overflow-hidden group border border-gray-200">
+                                {/* Preview with Error Handling */}
+                                <img 
+                                    src={formData.imageUrl} 
+                                    alt="Preview" 
+                                    className="w-full h-full object-contain"
+                                    onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.nextSibling.style.display = 'flex';
+                                    }} 
+                                />
+                                {/* Error State (Image not found) */}
+                                <div className="hidden absolute inset-0 flex flex-col items-center justify-center bg-slate-50 text-slate-400 p-4 text-center">
+                                    <AlertTriangle size={32} className="mb-2 text-amber-400" />
+                                    <p className="text-xs font-bold text-gray-600">画像が見つかりません</p>
+                                    <p className="text-[10px] mt-1 break-all">'{formData.imageUrl}'</p>
+                                    <p className="text-[10px] mt-2 text-amber-600 bg-amber-50 px-2 py-1 rounded">
+                                        index.htmlと同じ場所に<br/>imagesフォルダを作って入れてね
+                                    </p>
+                                </div>
+
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button 
+                                        type="button" 
+                                        onClick={handleRemoveImage}
+                                        className="bg-white/90 text-red-500 px-4 py-2 rounded-lg font-bold text-sm shadow-sm hover:bg-white"
+                                    >
+                                        削除する
+                                    </button>
+                                </div>
+                                <div className="absolute bottom-2 left-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-[10px] text-gray-600 truncate text-center pointer-events-none">
+                                    {formData.imageUrl}
+                                </div>
+                            </div>
+                        )}
+                        <div className="mt-2">
+                             <label className="block text-xs font-medium text-gray-500 mb-1">パスを手動入力する場合</label>
+                             <input type="text" name="imageUrl" value={formData.imageUrl} onChange={handleChange} className="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-xs text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20" placeholder="例: images/photo.jpg" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">メモ</label>
+                        <textarea name="memo" value={formData.memo} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm h-24 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" placeholder="スペック、シリアル番号など" />
+                    </div>
+                    <div className="pt-4 flex gap-3">
+                        <button type="button" onClick={onCancel} className="flex-1 py-3 border border-gray-200 rounded-xl text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">キャンセル</button>
+                        <button type="submit" className="flex-1 py-3 bg-brand-600 text-white rounded-xl text-sm font-bold hover:bg-brand-700 shadow-lg shadow-brand-500/20 transition-all">
+                            {isEdit ? '更新する' : '登録する'}
+                        </button>
+                    </div>
+                </form>
+            );
+        };
+
+        const ItemDetail = ({ item, onDelete, onStatusChange, onEdit }) => {
+            const status = STATUS_CONFIG[item.status];
+            return (
+                <div className="p-0">
+                    <div className="relative">
+                        <ItemImage 
+                            item={item} 
+                            size="lg" 
+                            className="w-full bg-slate-50 border-b border-slate-100"
+                            objectFit="contain" 
+                        />
+                        <button onClick={() => onEdit(item)} className="absolute bottom-4 right-4 bg-white/90 backdrop-blur text-gray-700 p-3 rounded-full shadow-lg border border-gray-200 hover:bg-white hover:scale-105 active:scale-95 transition-all z-10">
+                            <Edit size={20} />
+                        </button>
+                    </div>
+                    <div className="p-6">
+                        <div className="mb-6">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm font-bold text-brand-600 tracking-wider uppercase">{item.brand}</span>
+                                <span className="text-[10px] px-2 py-0.5 rounded text-slate-500 bg-slate-100 border border-slate-200">
+                                    {normalizeCategory(item.category)}
+                                </span>
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-900 leading-tight">{item.name}</h2>
+                        </div>
+                        <div className="mb-6">
+                            <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">ステータス変更</label>
+                            <div className="grid grid-cols-3 gap-2">
+                                {Object.values(STATUS_CONFIG).map((s) => {
+                                    const isActive = item.status === s.id;
+                                    const StatusIcon = s.icon;
+                                    return (
+                                        <button key={s.id} onClick={() => onStatusChange(item.id, s.id)} className={`relative flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 ${isActive ? `${s.bg} ${s.border} ${s.color} ring-1 ring-offset-1 ring-${s.color.split('-')[1]}-200` : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200 hover:bg-slate-50'}`}>
+                                            <StatusIcon size={20} className="mb-1" />
+                                            <span className="text-[10px] font-bold">{s.label}</span>
+                                            {isActive && <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-current"></div>}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        <div className="space-y-4 text-sm bg-white rounded-xl">
+                            <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                                <span className="text-gray-500 flex items-center gap-2"><Calendar size={16}/> 購入日</span>
+                                <span className="font-medium text-gray-900">{item.purchaseDate || '未設定'}</span>
+                            </div>
+                            <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                                <span className="text-gray-500 flex items-center gap-2 text-xs uppercase tracking-wide">Price</span>
+                                <span className="font-bold text-lg text-gray-900">{formatCurrency(item.price)}</span>
+                            </div>
+                        </div>
+                        <div className="mt-6">
+                            <span className="text-xs font-medium text-gray-400 uppercase tracking-wide block mb-2">Memo</span>
+                            <div className="bg-slate-50 p-4 rounded-xl text-gray-700 leading-relaxed text-sm whitespace-pre-wrap border border-slate-100">{item.memo || 'メモはありません'}</div>
+                        </div>
+                        <div className="mt-8 pt-6 border-t border-gray-100">
+                            <button onClick={() => { if(window.confirm('このアイテムを削除しますか？\n（履歴からも完全に消去されます）')) onDelete(item.id); }} className="w-full py-3 flex items-center justify-center gap-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors font-medium text-sm">
+                                <Trash2 size={16} /> データを完全に削除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const SettingsModal = ({ isOpen, onClose, onExport, onImport, onResetFromJson }) => {
+            if (!isOpen) return null;
+            return (
+                <Modal isOpen={isOpen} onClose={onClose} title="データ管理">
+                    <div className="p-6 space-y-6">
+                        <div className="bg-amber-50 p-4 rounded-xl text-xs text-amber-800 leading-relaxed border border-amber-100">
+                            <strong>※データ保存について:</strong> <br/>
+                            データはブラウザ内(LocalStorage)に自動保存されます。<br/>
+                            json/data.json を編集しただけでは画面に反映されません。反映させるには下の「初期データからリセット」を押してください。
+                        </div>
+
+                        <div className="space-y-3">
+                            <h4 className="font-bold text-gray-800">メンテナンス</h4>
+                            <button onClick={onResetFromJson} className="w-full py-3 bg-white border-2 border-slate-200 text-slate-600 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors">
+                                <RefreshCw size={20} /> 初期データ(JSON)からリセット
+                            </button>
+                            <p className="text-xs text-gray-400 ml-1">※json/data.json の内容でデータを完全上書きします</p>
+                        </div>
+
+                        <hr className="border-gray-100" />
+
+                        <div className="space-y-2">
+                            <h4 className="font-bold text-gray-800">バックアップ・復元</h4>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button onClick={onExport} className="py-3 bg-slate-100 text-slate-700 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors text-xs">
+                                    <Download size={16} /> バックアップ保存
+                                </button>
+                                <label className="py-3 bg-slate-100 text-slate-700 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-200 transition-colors cursor-pointer text-xs">
+                                    <Upload size={16} /> バックアップ読込
+                                    <input type="file" accept=".json" onChange={onImport} className="hidden" />
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </Modal>
+            );
+        };
+
+        const App = () => {
+            const [items, setItems] = useState([]);
+            const [isLoading, setIsLoading] = useState(true);
+            // お気に入りタブ：順番はブラウザに保存（id配列）
+            const [favOrder, setFavOrder] = useState([]);
+
+            const [isFavReorderMode, setIsFavReorderMode] = useState(false);
+            const [dragFavId, setDragFavId] = useState(null);
+            const favPressTimerRef = useRef(null);
+            const favPressStartRef = useRef({ x: 0, y: 0 });
+            const suppressFavClickRef = useRef(false);
+
+            // --- Load Data Logic ---
+            const loadDataFromJson = async (forceUpdate = false) => {
+                try {
+                    const response = await fetch('./json/data.json');
+                    if (response.ok) {
+                        const data = await response.json();
+                        // Handle Items
+                        const loadedItems = (Array.isArray(data) ? data : (data?.items || [])).map(i => ({ ...i, category: normalizeCategory(i.category) }));
+                        setItems(loadedItems);
+                        // Save to localStorage so it persists
+                        localStorage.setItem('monory_data', JSON.stringify(loadedItems));
+
+                        // Handle FavOrder from JSON if exists
+                        if (!Array.isArray(data) && Array.isArray(data.favOrder)) {
+                            setFavOrder(data.favOrder);
+                            localStorage.setItem('monory_fav_order', JSON.stringify(data.favOrder));
+                        } else {
+                            // If not in JSON, clear or keep? 
+                            // Current logic: Reset from JSON implies full reset, so clear it.
+                            localStorage.removeItem('monory_fav_order');
+                            setFavOrder([]);
+                        }
+
+                        if(forceUpdate) alert('JSONデータからリセットしました');
+                    } else {
+                        console.error('Failed to load JSON');
+                        if(forceUpdate) alert('JSONファイルの読み込みに失敗しました (404 Not Foundなど)');
+                    }
+                } catch (error) {
+                    console.error('Error loading JSON:', error);
+                    if(forceUpdate) alert('エラー: JSONファイルを読み込めませんでした。ローカルサーバー経由で開いていますか？');
+                }
+            };
+
+            // Initialize
+            useEffect(() => {
+                const initData = async () => {
+                    // 1. Try LocalStorage
+                    const saved = localStorage.getItem('monory_data');
+                    const savedFavOrder = localStorage.getItem('monory_fav_order');
+                    if (saved) {
+                        try {
+                            const parsed = JSON.parse(saved);
+                            // monory_data の将来拡張（{items, favOrder} 形式）にも対応
+                            if (parsed && typeof parsed === 'object' && Array.isArray(parsed.items)) {
+                                setItems(parsed.items.map(i => ({ ...i, category: normalizeCategory(i.category) })));
+                                if (Array.isArray(parsed.favOrder)) setFavOrder(parsed.favOrder);
+                            } else {
+                                setItems(parsed.map(i => ({ ...i, category: normalizeCategory(i.category) })));
+                                if (savedFavOrder) {
+                                    try {
+                                        const order = JSON.parse(savedFavOrder);
+                                        if (Array.isArray(order)) setFavOrder(order);
+                                    } catch (e) {}
+                                }
+                            }
+                            setIsLoading(false);
+                            return; // Priority to LocalStorage (User edits)
+                        } catch(e) {
+                            console.error('LocalStorage parse error', e);
+                        }
+                    }
+                    
+                    // 2. If no LocalStorage, load from JSON
+                    await loadDataFromJson();
+                    setIsLoading(false);
+                };
+                initData();
+            }, []);
+
+            const [activeTab, setActiveTab] = useState('active');
+            const [searchQuery, setSearchQuery] = useState('');
+            const [sortConfig, setSortConfig] = useState({ key: 'purchaseDate', direction: 'desc' });
+            
+            const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+            const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+            const [selectedItem, setSelectedItem] = useState(null);
+            const [editingItem, setEditingItem] = useState(null);
+
+            // Save to LocalStorage whenever items change
+            useEffect(() => {
+                if (!isLoading && items.length > 0) {
+                    localStorage.setItem('monory_data', JSON.stringify(items));
+                }
+            }, [items, isLoading]);
+
+            // Save fav order to LocalStorage
+            useEffect(() => {
+                if (!isLoading) {
+                    localStorage.setItem('monory_fav_order', JSON.stringify(favOrder));
+                }
+            }, [favOrder, isLoading]);
+
+            // お気に入り順のメンテ（解除/削除は除去、追加は末尾に補完）
+            useEffect(() => {
+                if (isLoading) return;
+                setFavOrder(prev => {
+                    const favIds = items.filter(i => i.favorite).map(i => i.id);
+                    const prevSet = new Set(prev);
+                    // 1) 解除/削除されたものは落とす（順番は維持）
+                    const kept = prev.filter(id => favIds.includes(id));
+                    // 2) favOrder に無いお気に入りは末尾に追加
+                    const appended = favIds.filter(id => !prevSet.has(id));
+                    return [...kept, ...appended];
+                });
+            }, [items, isLoading]);
+
+            // --- Export/Import Logic ---
+            const handleExport = () => {
+                // favorites順も含めてバックアップへ統合
+                const payload = {
+                    version: 2,
+                    items,
+                    favOrder,
+                };
+                const dataStr = JSON.stringify(payload, null, 2);
+                const blob = new Blob([dataStr], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `monory_backup_${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            const handleImport = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const json = JSON.parse(e.target.result);
+                        // 旧形式: 配列 / 新形式: {items, favOrder}
+                        const importedItems = Array.isArray(json) ? json : (json && typeof json === 'object' ? json.items : null);
+                        const importedFavOrder = (!Array.isArray(json) && json && typeof json === 'object' && Array.isArray(json.favOrder)) ? json.favOrder : null;
+
+                        if (Array.isArray(importedItems)) {
+                            if(window.confirm('現在のデータを上書きして復元しますか？')) {
+                                setItems(importedItems.map(i => ({ ...i, category: normalizeCategory(i.category) })));
+                                setFavOrder(importedFavOrder || []);
+                                setIsSettingsModalOpen(false);
+                                alert('復元が完了しました');
+                            }
+                        } else {
+                            alert('データの形式が正しくありません');
+                        }
+                    } catch (error) {
+                        alert('ファイルの読み込みに失敗しました');
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            const handleResetFromJson = async () => {
+                if(window.confirm('現在のデータを破棄し、json/data.json の内容で上書きしますか？')) {
+                    await loadDataFromJson(true);
+                    setIsSettingsModalOpen(false);
+                }
+            };
+
+            const handleToggleFavorite = (id) => {
+                setItems(prev => {
+                    let wasFav = false;
+                    const next = prev.map(it => {
+                        if (it.id !== id) return it;
+                        wasFav = !!it.favorite;
+                        return { ...it, favorite: !wasFav };
+                    });
+                    setFavOrder(order => {
+                        if (wasFav) {
+                            return order.filter(x => x !== id);
+                        }
+                        const without = order.filter(x => x !== id);
+                        return [id, ...without];
+                    });
+                    return next;
+                });
+                setSelectedItem(prev => (prev && prev.id === id ? { ...prev, favorite: !prev.favorite } : prev));
+            };
+
+            const moveFavorite = (id, dir) => {
+                setFavOrder(order => {
+                    const idx = order.indexOf(id);
+                    if (idx === -1) return order;
+                    const to = idx + dir;
+                    if (to < 0 || to >= order.length) return order;
+                    const copy = [...order];
+                    [copy[idx], copy[to]] = [copy[to], copy[idx]];
+                    return copy;
+                });
+            };
+
+            
+            // --- Favorite reorder (drag) ---
+            const clearFavPressTimer = () => {
+                if (favPressTimerRef.current) {
+                    clearTimeout(favPressTimerRef.current);
+                    favPressTimerRef.current = null;
+                }
+            };
+
+            const startFavReorder = (id) => {
+                if (activeTab !== 'favorite') return;
+                suppressFavClickRef.current = true;
+                setIsFavReorderMode(true);
+                setDragFavId(id);
+            };
+
+            const endFavReorder = () => {
+                clearFavPressTimer();
+                setIsFavReorderMode(false);
+                setDragFavId(null);
+                // クリック抑止を次のtickで解除（長押し直後の誤タップ防止）
+                setTimeout(() => {
+                    suppressFavClickRef.current = false;
+                }, 0);
+            };
+
+            const moveIdBefore = (order, fromId, toId) => {
+                const from = order.indexOf(fromId);
+                const to = order.indexOf(toId);
+                if (from === -1 || to === -1 || from === to) return order;
+                const copy = [...order];
+                copy.splice(from, 1);
+                const insertAt = from < to ? to - 1 : to;
+                copy.splice(insertAt, 0, fromId);
+                return copy;
+            };
+
+            const onFavHandlePointerDown = (e, id) => {
+                if (activeTab !== 'favorite') return;
+                e.stopPropagation();
+                // ハンドル掴んだら即ドラッグ開始（スマホでも長押し待たない）
+                clearFavPressTimer();
+                startFavReorder(id);
+            };
+
+            const onFavItemPointerDown = (e, id) => {
+                if (activeTab !== 'favorite') return;
+                // PCは誤動作防止のため、並び替え開始はハンドルからのみ
+                if (e.pointerType === 'mouse') return;
+                clearFavPressTimer();
+                favPressStartRef.current = { x: e.clientX, y: e.clientY };
+                favPressTimerRef.current = setTimeout(() => startFavReorder(id), 450);
+            };
+
+            const onFavItemPointerMove = (e) => {
+                if (activeTab !== 'favorite') return;
+                // 長押し待ち中に指が動いたらキャンセル（スクロール優先）
+                if (favPressTimerRef.current && !isFavReorderMode) {
+                    const dx = Math.abs(e.clientX - favPressStartRef.current.x);
+                    const dy = Math.abs(e.clientY - favPressStartRef.current.y);
+                    if (dx + dy > 12) {
+                        clearFavPressTimer();
+                    }
+                }
+            };
+
+            const onFavItemPointerUp = (e) => {
+                if (activeTab !== 'favorite') return;
+                // 長押し待ちだけ解除（並び替え中の終了はwindow側で拾う）
+                if (favPressTimerRef.current && !isFavReorderMode) {
+                    clearFavPressTimer();
+                }
+            };
+
+            useEffect(() => {
+                if (activeTab !== 'favorite') return;
+                if (!isFavReorderMode || !dragFavId) return;
+
+                const onMove = (e) => {
+                    // スクロール抑止（並び替え中）
+                    e.preventDefault();
+                    const el = document.elementFromPoint(e.clientX, e.clientY);
+                    const target = el && el.closest ? el.closest('[data-fav-id]') : null;
+                    if (!target) return;
+                    const overId = target.getAttribute('data-fav-id');
+                    if (!overId || overId === dragFavId) return;
+
+                    setFavOrder(order => moveIdBefore(order, dragFavId, overId));
+                };
+
+                const onUp = () => endFavReorder();
+
+                window.addEventListener('pointermove', onMove, { passive: false });
+                window.addEventListener('pointerup', onUp);
+                window.addEventListener('pointercancel', onUp);
+
+                return () => {
+                    window.removeEventListener('pointermove', onMove);
+                    window.removeEventListener('pointerup', onUp);
+                    window.removeEventListener('pointercancel', onUp);
+                };
+            }, [activeTab, isFavReorderMode, dragFavId]);
+
+            useEffect(() => {
+                if (activeTab !== 'favorite' && isFavReorderMode) {
+                    endFavReorder();
+                }
+            }, [activeTab]);
+
+            // --- Logic ---
+            const filteredItems = useMemo(() => {
+                let result = [...items];
+                if (activeTab === 'favorite') {
+                    result = result.filter(item => !!item.favorite);
+                } else if (activeTab !== 'all') {
+                    result = result.filter(item => item.status === activeTab);
+                }
+                if (searchQuery) {
+                    const q = searchQuery.toLowerCase();
+                    result = result.filter(item => 
+                        item.name.toLowerCase().includes(q) || 
+                        item.brand.toLowerCase().includes(q) ||
+                        normalizeCategory(item.category).toLowerCase().includes(q)
                     );
-                  })}
+                }
+                if (activeTab === 'favorite') {
+                    const idxMap = new Map(favOrder.map((id, idx) => [id, idx]));
+                    result.sort((a, b) => {
+                        const ai = idxMap.has(a.id) ? idxMap.get(a.id) : 1e9;
+                        const bi = idxMap.has(b.id) ? idxMap.get(b.id) : 1e9;
+                        if (ai !== bi) return ai - bi;
+                        // favOrder に無いものは購入日（降順）で後ろに寄せる
+                        const aDate = a.purchaseDate || '';
+                        const bDate = b.purchaseDate || '';
+                        if (aDate < bDate) return 1;
+                        if (aDate > bDate) return -1;
+                        return 0;
+                    });
+                } else {
+                    result.sort((a, b) => {
+                        let aVal = a[sortConfig.key];
+                        let bVal = b[sortConfig.key];
+                        if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+                        if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+                        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+                        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+                        return 0;
+                    });
+                }
+                return result;
+            }, [items, activeTab, searchQuery, sortConfig, favOrder]);
+
+            const handleAddItem = () => {
+                setEditingItem(null);
+                setIsFormModalOpen(true);
+            };
+
+            const handleEditItem = (item) => {
+                setEditingItem(item);
+                setSelectedItem(null); 
+                setIsFormModalOpen(true);
+            };
+
+            const handleSaveItem = (itemData) => {
+                const normalized = (itemData && itemData.favorite === undefined)
+                    ? { ...itemData, favorite: false }
+                    : itemData;
+                if (editingItem) {
+                    setItems(prev => prev.map(i => i.id === normalized.id ? normalized : i));
+                    setSelectedItem(normalized);
+                } else {
+                    setItems(prev => [normalized, ...prev]);
+                }
+                setIsFormModalOpen(false);
+                setEditingItem(null);
+            };
+
+            const handleDeleteItem = (id) => {
+                setItems(prev => prev.filter(i => i.id !== id));
+                setSelectedItem(null);
+            };
+
+            const handleStatusChange = (id, newStatus) => {
+                setItems(prev => prev.map(item => 
+                    item.id === id ? { ...item, status: newStatus } : item
+                ));
+                setSelectedItem(prev => ({ ...prev, status: newStatus }));
+            };
+
+            const toggleSort = (key) => {
+                setSortConfig(current => ({
+                    key,
+                    direction: current.key === key && current.direction === 'desc' ? 'asc' : 'desc'
+                }));
+            };
+
+            const tabs = [
+                { id: 'favorite', label: 'お気に入り' },
+                { id: 'active', label: '使用中' },
+                { id: 'archived', label: '保管中' },
+                { id: 'disposed', label: '廃棄/譲渡' },
+                { id: 'all', label: 'すべて' },
+            ];
+
+            if (isLoading) {
+                return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
+            }
+
+            return (
+                <div className="min-h-screen bg-slate-50 text-gray-800 font-sans pb-24">
+                    {/* --- Top App Bar --- */}
+                    <header className="bg-white/80 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200">
+                        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <h1 className="text-xl font-bold tracking-tight text-gray-900">Monory</h1>
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={() => setIsSettingsModalOpen(true)} className="bg-slate-100 text-slate-600 p-2 rounded-full hover:bg-slate-200 transition-colors">
+                                    <Settings size={20} />
+                                </button>
+                                <button onClick={handleAddItem} className="bg-brand-600 text-white p-2 rounded-full shadow-lg shadow-brand-200 hover:bg-brand-700 transition-transform active:scale-95">
+                                    <Plus size={24} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="max-w-3xl mx-auto">
+                            <div className="flex overflow-x-auto hide-scrollbar px-4 gap-6">
+                                {tabs.map(tab => (
+                                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`pb-3 border-b-2 transition-colors whitespace-nowrap text-sm font-medium ${activeTab === tab.id ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                                        {tab.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* --- Main Content --- */}
+                    <main className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+                        {/* Search & Filter Bar */}
+                        <div className="flex gap-3">
+                            <div className="relative flex-1 group">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-500 transition-colors" size={18} />
+                                <input type="text" placeholder="アイテムを検索..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm transition-all shadow-sm" />
+                            </div>
+                            <button onClick={() => toggleSort('purchaseDate')} className={`px-4 py-2.5 bg-white border border-slate-200 rounded-xl flex items-center gap-2 text-sm font-medium shadow-sm transition-all ${sortConfig.key === 'purchaseDate' ? 'text-brand-600 bg-brand-50 border-brand-200 ring-2 ring-brand-500/20' : 'text-gray-600 hover:bg-gray-50'}`}>
+                                <Filter size={16} />
+                                <span className="hidden sm:inline">購入日順</span>
+                            </button>
+                        </div>
+
+                        {/* Item List */}
+                        <div className="flex flex-col gap-3">
+                            {filteredItems.map(item => {
+                                const statusConfig = STATUS_CONFIG[item.status];
+                                return (
+                                    <div
+                                        key={item.id}
+                                        data-fav-id={item.id}
+                                        onPointerDown={(e) => onFavItemPointerDown(e, item.id)}
+                                        onPointerMove={onFavItemPointerMove}
+                                        onPointerUp={onFavItemPointerUp}
+                                        onPointerCancel={onFavItemPointerUp}
+                                        onClick={() => {
+                                            if (activeTab === 'favorite' && (isFavReorderMode || suppressFavClickRef.current)) return;
+                                            setSelectedItem(item);
+                                        }}
+                                        className="bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer active:scale-[0.99] duration-200 flex overflow-hidden group items-center">
+                                        <div className="w-20 h-20 shrink-0 border-r border-slate-50">
+                                            <ItemImage item={item} size="md" className="w-full h-full" />
+                                        </div>
+                                        <div className="p-3 flex-1 flex flex-col justify-between min-w-0">
+                                            <div className="flex items-center justify-between gap-2 mb-1">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-[10px] text-brand-600 font-bold uppercase tracking-wide truncate">{item.brand}</p>
+                                                    <span 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSearchQuery(item.category);
+                                                        }}
+                                                        className="text-[9px] px-1.5 py-0.5 rounded text-slate-500 bg-slate-100 border border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors"
+                                                    >
+                                                        {normalizeCategory(item.category)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    {(activeTab === 'all') && <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium border ${statusConfig.bg} ${statusConfig.color} ${statusConfig.border}`}>{statusConfig.label}</span>}
+                                                    {activeTab === 'favorite' && (
+                                                            <span
+                                                                onPointerDown={(e) => onFavHandlePointerDown(e, item.id)}
+                                                                className="px-2 py-1 text-[12px] font-bold rounded bg-slate-100 text-slate-600 hover:bg-slate-200 select-none cursor-grab active:cursor-grabbing touch-none"
+                                                                title="並び替え（ドラッグ）"
+                                                                style={{ touchAction: 'none' }}
+                                                            >
+                                                                ≡
+                                                            </span>
+                                                        )}
+                                                </div>
+                                            </div>
+                                            <h3 className="font-bold text-gray-900 text-sm leading-snug truncate mb-1">{item.name}</h3>
+                                            <div className="flex items-center justify-between mt-1">
+                                                <div className="flex items-center gap-3">
+                                                    <span
+                                                        onClick={(e) => { e.stopPropagation(); handleToggleFavorite(item.id); }}
+                                                        className={`text-lg leading-none select-none ${item.favorite ? 'text-yellow-400' : 'text-yellow-400/70'} hover:scale-110 active:scale-95 transition-transform`}
+                                                        title="お気に入り切替"
+                                                    >
+                                                        {item.favorite ? '★' : '☆'}
+                                                    </span>
+                                                    <span className="font-semibold text-gray-700 text-xs">{formatCurrency(item.price)}</span>
+                                                </div>
+                                                <ChevronRight size={14} className="text-gray-300" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        {filteredItems.length === 0 && (
+                            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4"><Archive size={32} className="opacity-50" /></div>
+                                <p className="font-medium">アイテムが見つかりません</p>
+                            </div>
+                        )}
+                    </main>
+
+                    {/* --- Modals --- */}
+                    <Modal isOpen={!!selectedItem} onClose={() => setSelectedItem(null)} title="詳細">
+                        {selectedItem && <ItemDetail item={selectedItem} onDelete={handleDeleteItem} onStatusChange={handleStatusChange} onEdit={handleEditItem} />}
+                    </Modal>
+
+                    <Modal isOpen={isFormModalOpen} onClose={() => { setIsFormModalOpen(false); setEditingItem(null); }} title={editingItem ? "アイテム編集" : "新規登録"}>
+                        <ItemForm initialValues={editingItem} onSubmit={handleSaveItem} onCancel={() => { setIsFormModalOpen(false); setEditingItem(null); }} />
+                    </Modal>
+
+                    <SettingsModal 
+                        isOpen={isSettingsModalOpen} 
+                        onClose={() => setIsSettingsModalOpen(false)} 
+                        onExport={handleExport} 
+                        onImport={handleImport}
+                        onResetFromJson={handleResetFromJson}
+                    />
                 </div>
-              </div>
-            )}
-          </div>
+            );
+        }
 
-          <div className="footer">
-            保存先: LocalStorage（この端末のこのブラウザ）
-          </div>
-        </div>
-      );
-    }
-
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-  </script>
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>
