@@ -119,6 +119,12 @@
         };
         const normalizeCategory = (cat) => CATEGORY_ALIASES[cat] || cat;
 
+        // タグ正規化（前後スペース除去）
+        const normalizeTag = (t) => {
+            if (t === null || t === undefined) return '';
+            return String(t).trim();
+        };
+
         const CATEGORY_ICONS = {
             'PC': Laptop,
             'モバイル': Smartphone,
@@ -141,12 +147,6 @@
         const formatCurrency = (amount) => {
             return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(amount);
         };
-
-        const normalizeTag = (t) => {
-            if (t === null || t === undefined) return '';
-            return String(t).trim();
-        };
-
 
         // --- Components ---
 
@@ -212,39 +212,42 @@
                 purchaseDate: '',
                 status: 'active',
                 memo: '',
-                imageUrl: '',
                 tags: [],
-                ...(initialValues ? {
-                    ...initialValues,
-                    category: normalizeCategory(initialValues.category),
-                    tags: Array.isArray(initialValues.tags) ? initialValues.tags.map(normalizeTag).filter(Boolean) : []
-                } : {})
+                imageUrl: '',
+                ...(initialValues ? { ...initialValues, category: normalizeCategory(initialValues.category), tags: Array.isArray(initialValues.tags) ? initialValues.tags.map(normalizeTag).filter(Boolean) : [] } : {})
             });
             const [isDragging, setIsDragging] = useState(false);
+            const [tagInput, setTagInput] = useState('');
             const fileInputRef = useRef(null);
 
             const isEdit = !!initialValues;
-            const [tagInput, setTagInput] = useState('');
 
             const handleChange = (e) => {
                 const { name, value } = e.target;
                 setFormData(prev => ({ ...prev, [name]: value }));
             };
 
-            const addTagToForm = () => {
-                const t = normalizeTag(tagInput);
-                if (!t) return;
+
+            const addTagsFromInput = () => {
+                const raw = tagInput;
+                if (!raw) return;
+                const parts = raw.split(/[\n,]/).map(x => normalizeTag(x)).filter(Boolean);
+                if (!parts.length) return;
                 setFormData(prev => {
-                    const current = Array.isArray(prev.tags) ? prev.tags : [];
-                    if (current.includes(t)) return prev;
-                    return { ...prev, tags: [...current, t] };
+                    const cur = Array.isArray(prev.tags) ? prev.tags : [];
+                    const merged = [...cur, ...parts].map(normalizeTag).filter(Boolean);
+                    const uniq = Array.from(new Set(merged));
+                    return { ...prev, tags: uniq };
                 });
                 setTagInput('');
             };
 
             const removeTagFromForm = (t) => {
                 const nt = normalizeTag(t);
-                setFormData(prev => ({ ...prev, tags: (Array.isArray(prev.tags) ? prev.tags : []).filter(x => x !== nt) }));
+                setFormData(prev => ({
+                    ...prev,
+                    tags: (Array.isArray(prev.tags) ? prev.tags : []).map(normalizeTag).filter(Boolean).filter(x => x !== nt)
+                }));
             };
 
             const processFile = (file) => {
@@ -288,7 +291,7 @@
                     category: normalizeCategory(formData.category),
                     id: formData.id || Date.now().toString(),
                     price: Number(formData.price) || 0,
-                    tags: Array.isArray(formData.tags) ? formData.tags.map(normalizeTag).filter(Boolean) : []
+                    tags: Array.from(new Set((Array.isArray(formData.tags) ? formData.tags : []).map(normalizeTag).filter(Boolean)))
                 });
             };
 
@@ -316,7 +319,7 @@
                         <label className="block text-xs font-medium text-gray-500 mb-1">製品名</label>
                         <input type="text" name="name" value={formData.name} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" placeholder="iPhone 15, etc." required />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-medium text-gray-500 mb-1">購入価格 (円)</label>
                             <input type="number" name="price" value={formData.price} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" placeholder="0" />
@@ -327,7 +330,6 @@
                         </div>
                     </div>
 
-                    {/* タグ */} 
                     <div>
                         <label className="block text-xs font-medium text-gray-500 mb-1">タグ</label>
                         <div className="flex gap-2">
@@ -335,31 +337,33 @@
                                 type="text"
                                 value={tagInput}
                                 onChange={(e) => setTagInput(e.target.value)}
-                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTagToForm(); } }}
-                                placeholder="タグを追加..."
-                                className="flex-1 p-3 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTagsFromInput(); } }}
+                                className="flex-1 p-3 border border-gray-200 rounded-xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+                                placeholder="例: 仕事, 予備, 修理中"
                             />
                             <button
                                 type="button"
-                                onClick={addTagToForm}
-                                className="px-4 py-3 rounded-xl bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 active:bg-slate-900 transition-colors"
+                                onClick={addTagsFromInput}
+                                className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 text-sm font-medium hover:bg-slate-200 transition-colors"
                             >
                                 追加
                             </button>
                         </div>
-                        {Array.isArray(formData.tags) && formData.tags.length > 0 && (
+                        {Array.isArray(formData.tags) && formData.tags.filter(Boolean).length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-2">
-                                {formData.tags.map((t, idx) => (
-                                    <span key={`${t}-${idx}`} className="inline-flex items-center gap-1 text-[11px] px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                                        {t}
-                                        <button type="button" onClick={() => removeTagFromForm(t)} className="text-slate-500 hover:text-slate-800">×</button>
+                                {formData.tags.filter(Boolean).map((t, idx) => (
+                                    <span key={`${t}-${idx}`} className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                                        {normalizeTag(t)}
+                                        <button type="button" onClick={() => removeTagFromForm(t)} className="p-0.5 hover:bg-slate-200 rounded-full">
+                                            <X size={12} />
+                                        </button>
                                     </span>
                                 ))}
                             </div>
                         )}
                     </div>
 
-                    {/* Image Drag & Drop Area (File Path Link Mode) */}
+{/* Image Drag & Drop Area (File Path Link Mode) */}
                     <div>
                         <div className="flex items-center justify-between mb-1">
                             <label className="block text-xs font-medium text-gray-500">画像ファイル</label>
@@ -471,9 +475,7 @@
                                     {normalizeCategory(item.category)}
                                 </span>
                                 {Array.isArray(item.tags) && item.tags.filter(Boolean).map((tag, idx) => (
-                                    <span key={`${tag}-${idx}`} className="text-[10px] px-2 py-0.5 rounded text-slate-500 bg-slate-100 border border-slate-200">
-                                        {tag}
-                                    </span>
+                                    <span key={`${tag}-${idx}`} className="text-[10px] px-2 py-0.5 rounded text-slate-500 bg-slate-100 border border-slate-200">{normalizeTag(tag)}</span>
                                 ))}
                             </div>
                             <h2 className="text-xl font-bold text-gray-900 leading-tight">{item.name}</h2>
@@ -733,6 +735,13 @@
             };
 
             const handleToggleFavorite = (id) => {
+                // お気に入りタブで★を外す時は確認
+                const current = items.find(x => x.id === id);
+                if (activeTab === 'favorite' && current && current.favorite) {
+                    const ok = window.confirm('お気に入りから外しますか？');
+                    if (!ok) return;
+                }
+
                 setItems(prev => {
                     let wasFav = false;
                     const next = prev.map(it => {
@@ -894,7 +903,7 @@
                     result = result.filter(item => {
                         const bucket = new Set([
                             normalizeTag(normalizeCategory(item.category)),
-                            ...(Array.isArray(item.tags) ? item.tags.map(normalizeTag) : [])
+                            ...((Array.isArray(item.tags) ? item.tags : []).map(normalizeTag))
                         ].filter(Boolean));
                         return selectedTags.every(t => bucket.has(t));
                     });
@@ -924,7 +933,7 @@
                     });
                 }
                 return result;
-            }, [items, activeTab, searchQuery, sortConfig, favOrder]);
+            }, [items, activeTab, searchQuery, selectedTags, sortConfig, favOrder]);
 
             const handleAddItem = () => {
                 setEditingItem(null);
@@ -1092,11 +1101,9 @@
                                                     {Array.isArray(item.tags) && item.tags.filter(Boolean).map((tag, idx) => (
                                                         <span
                                                             key={`${tag}-${idx}`}
-                                                            onClick={(e) => { e.stopPropagation(); toggleTag(tag); }}
+                                                            onClick={(e) => { e.stopPropagation(); toggleTag(normalizeTag(tag)); }}
                                                             className="text-[9px] px-1.5 py-0.5 rounded text-slate-500 bg-slate-100 border border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors"
-                                                        >
-                                                            {tag}
-                                                        </span>
+                                                        >{normalizeTag(tag)}</span>
                                                     ))}
                                                 </div>
                                                 <ChevronRight size={14} className="text-gray-300" />
@@ -1114,39 +1121,40 @@
                         )}
                     </main>
 
+{/* --- Footer --- */}
+<footer className="fixed bottom-0 left-0 right-0 z-30 bg-white/90 backdrop-blur-md border-t border-slate-200">
+    <div className="max-w-3xl mx-auto px-4 py-3">
+        <div className="flex items-center gap-2">
+            <button
+                onClick={() => setIsTagModalOpen(true)}
+                className={`px-3 py-2.5 rounded-xl border text-sm font-medium shadow-sm transition-colors ${selectedTags.length ? 'bg-brand-50 text-brand-700 border-brand-200 ring-2 ring-brand-500/20' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+                title="タグで絞り込み"
+            >
+                タグ
+            </button>
 
-                    {/* --- Footer Tag Filter --- */}
-                    <footer className="fixed bottom-0 left-0 right-0 z-30 bg-white/90 backdrop-blur-md border-t border-slate-200">
-                        <div className="max-w-3xl mx-auto px-4 py-3">
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => setIsTagModalOpen(true)}
-                                    className={`px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors ${selectedTags.length > 0 ? 'bg-brand-50 text-brand-700 border-brand-200' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
-                                >
-                                    タグ{selectedTags.length > 0 ? `(${selectedTags.length})` : ''}
-                                </button>
+            <div className="relative flex-1 group">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-500 transition-colors" size={18} />
+                <input
+                    type="text"
+                    placeholder="アイテムを検索..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm transition-all shadow-sm"
+                />
+            </div>
 
-                                <div className="relative flex-1 group">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-500 transition-colors" size={18} />
-                                    <input
-                                        type="text"
-                                        placeholder="アイテムを検索..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-sm transition-all shadow-sm"
-                                    />
-                                </div>
-
-                                <button
-                                    onClick={() => toggleSort('purchaseDate')}
-                                    className={`px-4 py-2.5 bg-white border border-slate-200 rounded-xl flex items-center gap-2 text-sm font-medium shadow-sm transition-all ${sortConfig.key === 'purchaseDate' ? 'text-brand-600 bg-brand-50 border-brand-200 ring-2 ring-brand-500/20' : 'text-gray-600 hover:bg-gray-50'}`}
-                                >
-                                    <Filter size={16} />
-                                    <span className="hidden sm:inline">購入日順</span>
-                                </button>
-                            </div>
-                        </div>
-                    </footer>
+            <button
+                onClick={() => toggleSort('purchaseDate')}
+                className={`px-3 py-2.5 bg-white border border-slate-200 rounded-xl flex items-center gap-2 text-sm font-medium shadow-sm transition-all ${sortConfig.key === 'purchaseDate' ? 'text-brand-600 bg-brand-50 border-brand-200 ring-2 ring-brand-500/20' : 'text-gray-600 hover:bg-gray-50'}`}
+                title="購入日で並び替え"
+            >
+                <Filter size={16} />
+                <span className="hidden sm:inline">購入日順</span>
+            </button>
+        </div>
+    </div>
+</footer>
 
                     {/* --- Modals --- */}
                     <Modal isOpen={!!selectedItem} onClose={() => setSelectedItem(null)} title="詳細">
@@ -1157,43 +1165,43 @@
                         <ItemForm initialValues={editingItem} onSubmit={handleSaveItem} onCancel={() => { setIsFormModalOpen(false); setEditingItem(null); }} />
                     </Modal>
 
-                    <SettingsModal 
+<Modal isOpen={isTagModalOpen} onClose={() => setIsTagModalOpen(false)} title="タグ選択">
+    <div className="p-4">
+        <div className="flex flex-wrap gap-2">
+            {allFooterTags.map(tag => {
+                const isOn = selectedTags.includes(tag);
+                return (
+                    <button
+                        key={tag}
+                        onClick={() => toggleTag(tag)}
+                        className={`text-[12px] px-3 py-1.5 rounded-full border transition-colors ${isOn ? 'bg-brand-600 text-white border-brand-600' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'}`}
+                    >
+                        {tag}
+                    </button>
+                );
+            })}
+        </div>
+        {selectedTags.length > 0 && (
+            <div className="mt-4">
+                <button
+                    onClick={() => setSelectedTags([])}
+                    className="text-sm text-slate-600 hover:text-slate-900 underline"
+                >
+                    すべて解除
+                </button>
+            </div>
+        )}
+    </div>
+</Modal>
+
+                    <SettingsModal
+
                         isOpen={isSettingsModalOpen} 
                         onClose={() => setIsSettingsModalOpen(false)} 
                         onExport={handleExport} 
                         onImport={handleImport}
                         onResetFromJson={handleResetFromJson}
                     />
-
-                    <Modal isOpen={isTagModalOpen} onClose={() => setIsTagModalOpen(false)} title="タグ選択">
-                        <div className="p-6">
-                            <div className="flex flex-wrap gap-2">
-                                {allFooterTags.map(tag => {
-                                    const isOn = selectedTags.includes(tag);
-                                    return (
-                                        <button
-                                            key={tag}
-                                            onClick={() => toggleTag(tag)}
-                                            className={`text-xs px-3 py-2 rounded-full border transition-colors ${isOn ? 'bg-brand-600 text-white border-brand-600' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'}`}
-                                        >
-                                            {tag}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            {selectedTags.length > 0 && (
-                                <div className="mt-4">
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedTags([])}
-                                        className="w-full py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                                    >
-                                        全解除
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </Modal>
                 </div>
             );
         }
