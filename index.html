@@ -207,10 +207,27 @@
                 status: 'active',
                 memo: '',
                 imageUrl: '',
-                ...(initialValues ? { ...initialValues, category: normalizeCategory(initialValues.category) } : {})
+                tags: [],
+                ...(initialValues ? { ...initialValues, category: normalizeCategory(initialValues.category), tags: Array.isArray(initialValues.tags) ? initialValues.tags : [] } : {})
             });
             const [isDragging, setIsDragging] = useState(false);
             const fileInputRef = useRef(null);
+            const [tagInput, setTagInput] = useState('');
+
+            const addFormTag = () => {
+                const t = (tagInput || '').trim();
+                if (!t) return;
+                setFormData(prev => {
+                    const prevTags = Array.isArray(prev.tags) ? prev.tags : [];
+                    if (prevTags.includes(t)) return prev;
+                    return { ...prev, tags: [...prevTags, t] };
+                });
+                setTagInput('');
+            };
+
+            const removeFormTag = (t) => {
+                setFormData(prev => ({ ...prev, tags: (Array.isArray(prev.tags) ? prev.tags : []).filter(x => x !== t) }));
+            };
 
             const isEdit = !!initialValues;
 
@@ -373,7 +390,47 @@
                         </div>
                     </div>
 
+                    
                     <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">タグ</label>
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={tagInput}
+                                onChange={(e) => setTagInput(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addFormTag(); } }}
+                                className="flex-1 p-3 border border-gray-200 rounded-xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+                                placeholder="例: USB-C, ケーブル, 予備"
+                            />
+                            <button
+                                type="button"
+                                onClick={addFormTag}
+                                className="px-4 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold text-sm border border-slate-200 hover:bg-slate-200 transition-colors"
+                            >
+                                追加
+                            </button>
+                        </div>
+
+                        {Array.isArray(formData.tags) && formData.tags.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                                {formData.tags.map(t => (
+                                    <span key={t} className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full text-slate-600 bg-slate-100 border border-slate-200">
+                                        {t}
+                                        <button
+                                            type="button"
+                                            onClick={() => removeFormTag(t)}
+                                            className="p-0.5 rounded-full hover:bg-slate-200 transition-colors"
+                                            aria-label="タグを外す"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+<div>
                         <label className="block text-xs font-medium text-gray-500 mb-1">メモ</label>
                         <textarea name="memo" value={formData.memo} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm h-24 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all" placeholder="スペック、シリアル番号など" />
                     </div>
@@ -576,7 +633,7 @@
             const [searchQuery, setSearchQuery] = useState('');
             const [sortConfig, setSortConfig] = useState({ key: 'purchaseDate', direction: 'desc' });
             
-            const [filterTags, setFilterTags] = useState([]);
+            const [selectedTags, setSelectedTags] = useState([]);
             const [isFormModalOpen, setIsFormModalOpen] = useState(false);
             const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
             const [selectedItem, setSelectedItem] = useState(null);
@@ -821,26 +878,16 @@
                         normalizeCategory(item.category).toLowerCase().includes(q)
                     );
                 }
-if (filterTags.length) {
-    const byType = filterTags.reduce((acc, t) => {
-        if (!acc[t.type]) acc[t.type] = new Set();
-        acc[t.type].add(t.value);
-        return acc;
-    }, {});
+
+if (selectedTags.length) {
     result = result.filter(item => {
         const cat = normalizeCategory(item.category);
-        for (const type in byType) {
-            const set = byType[type];
-            if (type === 'category') {
-                if (!set.has(cat)) return false; // OR within category
-            } else {
-                // reserved for future tag types
-                if (!set.has(item[type])) return false;
-            }
-        }
-        return true;
+        const tags = Array.isArray(item.tags) ? item.tags : [];
+        // OR条件：選択タグのどれかにヒットしたら通す
+        return selectedTags.some(t => t === cat || tags.includes(t));
     });
 }
+
 
                 if (activeTab === 'favorite') {
                     const idxMap = new Map(favOrder.map((id, idx) => [id, idx]));
@@ -867,7 +914,7 @@ if (filterTags.length) {
                     });
                 }
                 return result;
-            }, [items, activeTab, searchQuery, filterTags, sortConfig, favOrder]);
+            }, [items, activeTab, searchQuery, selectedTags, sortConfig, favOrder]);
 
             const handleAddItem = () => {
                 setEditingItem(null);
@@ -913,16 +960,24 @@ if (filterTags.length) {
     }));
 };
 
-const addTag = (type, value, label) => {
-    setFilterTags(prev => {
-        if (prev.some(t => t.type === type && t.value === value)) return prev;
-        return [...prev, { type, value, label }];
-    });
+
+const toggleTag = (tag) => {
+    setSelectedTags(prev => (prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]));
 };
 
-const removeTag = (type, value) => {
-    setFilterTags(prev => prev.filter(t => !(t.type === type && t.value === value)));
-};
+const allFooterTags = useMemo(() => {
+    const set = new Set();
+    items.forEach(it => {
+        set.add(normalizeCategory(it.category));
+        const tags = Array.isArray(it.tags) ? it.tags : [];
+        tags.forEach(t => {
+            if (t && typeof t === 'string') set.add(t);
+        });
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'ja'));
+}, [items]);
+
+
 
             const tabs = [
                 { id: 'favorite', label: 'お気に入り' },
@@ -937,7 +992,7 @@ const removeTag = (type, value) => {
             }
 
             return (
-                <div className="min-h-screen bg-slate-50 text-gray-800 font-sans pb-24">
+                <div className="min-h-screen bg-slate-50 text-gray-800 font-sans pb-28">
                     {/* --- Top App Bar --- */}
                     <header className="bg-white/80 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200">
                         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
@@ -962,25 +1017,6 @@ const removeTag = (type, value) => {
         </button>
     </div>
 </div>
-
-{filterTags.length > 0 && (
-    <div className="max-w-3xl mx-auto px-4 pb-2">
-        <div className="flex flex-wrap gap-2">
-            {filterTags.map(tag => (
-                <span key={`${tag.type}:${tag.value}`} className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full text-slate-600 bg-slate-100 border border-slate-200">
-                    {tag.label}
-                    <button
-                        onClick={() => removeTag(tag.type, tag.value)}
-                        className="p-0.5 rounded-full hover:bg-slate-200 transition-colors"
-                        aria-label="タグを外す"
-                    >
-                        <X size={12} />
-                    </button>
-                </span>
-            ))}
-        </div>
-    </div>
-)}
 
 <div className="max-w-3xl mx-auto">
 
@@ -1050,7 +1086,7 @@ const removeTag = (type, value) => {
                                                     <span
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            addTag('category', normalizeCategory(item.category), normalizeCategory(item.category));
+                                                            toggleTag(normalizeCategory(item.category));
                                                         }}
                                                         className="text-[9px] px-1.5 py-0.5 rounded text-slate-500 bg-slate-100 border border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors"
                                                     >
@@ -1071,6 +1107,26 @@ const removeTag = (type, value) => {
                             </div>
                         )}
                     </main>
+
+                    {/* --- Footer Tag Filter --- */}
+                    <footer className="fixed bottom-0 left-0 right-0 z-30 bg-white/90 backdrop-blur-md border-t border-slate-200">
+                        <div className="max-w-3xl mx-auto px-4 py-3">
+                            <div className="flex overflow-x-auto hide-scrollbar gap-2">
+                                {allFooterTags.map(tag => {
+                                    const isOn = selectedTags.includes(tag);
+                                    return (
+                                        <button
+                                            key={tag}
+                                            onClick={() => toggleTag(tag)}
+                                            className={`shrink-0 text-[10px] px-3 py-1.5 rounded-full border transition-colors ${isOn ? 'bg-brand-600 text-white border-brand-600' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'}`}
+                                        >
+                                            {tag}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </footer>
 
                     {/* --- Modals --- */}
                     <Modal isOpen={!!selectedItem} onClose={() => setSelectedItem(null)} title="詳細">
