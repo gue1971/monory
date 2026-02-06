@@ -113,10 +113,12 @@
             'PC・ワークスペース': 'PC',
             'モバイル・ガジェット': 'モバイル',
             'キッチン家電': 'キッチン',
-            'AV・エンタメ': 'オーディオ',
-            'ファッション・もちもの': 'ファッション',
-            'ファッション・持ち物': 'ファッション',
-        };
+            'AV・エンタメ': 'AV',
+            'ファッション・もちもの': '服飾品',
+            'ファッション・持ち物': '服飾品',
+                    'オーディオ': 'AV',
+            'ファッション': '服飾品',
+};
         const normalizeCategory = (cat) => CATEGORY_ALIASES[cat] || cat;
 
         // タグ正規化（前後スペース除去）
@@ -131,10 +133,21 @@
             'キッチン': Utensils,
             '理美容': Zap,
             '生活家電': Zap,
-            'オーディオ': Tv,
+            'AV': Tv,
             'エンタメ': Tv,
-            'ファッション': ShoppingBag,
+            '服飾品': ShoppingBag,
             'その他': Car,
+        };
+
+        const CATEGORY_ORDER = ['PC','モバイル','AV','生活家電','キッチン','エンタメ','理美容','服飾品','その他'];
+        const sortCategoriesFixed = (arr) => {
+            const idx = new Map(CATEGORY_ORDER.map((k,i)=>[k,i]));
+            return [...arr].sort((a,b)=>{
+                const ia = idx.has(a) ? idx.get(a) : 9999;
+                const ib = idx.has(b) ? idx.get(b) : 9999;
+                if (ia !== ib) return ia-ib;
+                return String(a).localeCompare(String(b), 'ja');
+            });
         };
 
         const STATUS_CONFIG = {
@@ -301,7 +314,7 @@
                         <div>
                             <label className="block text-xs font-medium text-gray-500 mb-1">カテゴリ</label>
                             <select name="category" value={formData.category} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
-                                {Object.keys(CATEGORY_ICONS).map(k => <option key={k} value={k}>{k}</option>)}
+                                {sortCategoriesFixed(Object.keys(CATEGORY_ICONS)).map(k => <option key={k} value={k}>{k}</option>)}
                             </select>
                         </div>
                         <div>
@@ -987,15 +1000,13 @@
             };
 
             const categoryFooterTags = useMemo(() => {
-                const counts = new Map();
+                const cats = new Set();
                 items.forEach(it => {
                     const c = normalizeTag(normalizeCategory(it.category));
                     if (!c) return;
-                    counts.set(c, (counts.get(c) || 0) + 1);
+                    cats.add(c);
                 });
-                return Array.from(counts.entries())
-                    .sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0], 'ja'))
-                    .map(([name]) => name);
+                return sortCategoriesFixed(Array.from(cats));
             }, [items]);
 
             const tagFooterTags = useMemo(() => {
