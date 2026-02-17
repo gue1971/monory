@@ -1,7 +1,9 @@
 {
   "name": "Monory",
   "short_name": "Monory",
-  "start_url": "./index.html",
+  "id": "/monory/",
+  "start_url": "/monory/",
+  "scope": "/monory/",
   "display": "standalone",
   "background_color": "#222222",
   "theme_color": "#333333",
