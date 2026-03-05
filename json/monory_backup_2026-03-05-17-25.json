@@ -2,66 +2,6 @@
   "version": 2,
   "items": [
     {
-      "category": "その他",
-      "brand": "Viozon",
-      "name": "昇降式サイドテーブル",
-      "price": 4693,
-      "purchaseDate": "2026-03-03",
-      "status": "active",
-      "memo": "木目調 耐荷重 15kg\nテーブルトップ 32cm x 42cm\n高さ 67cm - 93cm 重量 4.45kg\nアイアンベース 30cm x 30cm x 0.4cm",
-      "tags": [
-        "テーブル"
-      ],
-      "imageUrl": "images/sidetable.jpeg",
-      "id": "1772702699770",
-      "favorite": true
-    },
-    {
-      "category": "PC",
-      "brand": "エレコム",
-      "name": "コンパクト10口タップ ECT-15シリーズ",
-      "price": 1953,
-      "purchaseDate": "2022-07-13",
-      "status": "active",
-      "memo": "ECT-1530BK ブラック\n10個口 差し込み口2面 3m\nマグネット ほこりシャッター付 スイングプラグ\n雷ガード 一括スイッチ",
-      "tags": [
-        "電源タップ"
-      ],
-      "imageUrl": "images/ECT-1530BK_01.jpeg",
-      "id": "1772701980676",
-      "favorite": true
-    },
-    {
-      "category": "PC",
-      "brand": "LpoieJun.HH",
-      "name": "USB 3.2 Gen 2x2 Type-Cケーブル 3m",
-      "price": 1999,
-      "purchaseDate": "2022-07-13",
-      "status": "archived",
-      "memo": "3m L字 網組ナイロン ブラック\n20Gbps 超高速データ転送\nPD3.0/GD3.0 100w(20V/5A) 急速充電\n4K 60Hz 映像出力\nE-Markerチップ搭載",
-      "tags": [
-        "USBケーブル"
-      ],
-      "imageUrl": "images/lpoie.jpeg",
-      "id": "1772701451844",
-      "favorite": false
-    },
-    {
-      "category": "PC",
-      "brand": "LpoieJun.HH",
-      "name": "USB 3.2 Gen 2x2 Type-Cケーブル 1m",
-      "price": 1499,
-      "purchaseDate": "2022-07-13",
-      "status": "archived",
-      "memo": "1m L字 網組ナイロン ブラック\n20Gbps 超高速データ転送\nPD3.0/GD3.0 100w(20V/5A) 急速充電\n4K 60Hz 映像出力 E-Markerチップ搭載",
-      "tags": [
-        "USBケーブル"
-      ],
-      "imageUrl": "images/lpoie.jpeg",
-      "id": "1772701285448",
-      "favorite": false
-    },
-    {
       "category": "PC",
       "brand": "CIO",
       "name": "USB-C マグネット変換アダプタ",
@@ -83,7 +23,7 @@
       "price": 2080,
       "purchaseDate": "2026-03-04",
       "status": "active",
-      "memo": "ブラック 2m マグネット吸着\nPD 240W 急速充電\n480Mbps データ転送\n2本購入",
+      "memo": "CIO-SLSC30000-CC ブラック 2m マグネット吸着\nPD3.1 240W 急速充電\n480Mbps データ転送\n2本購入",
       "tags": [
         "USBケーブル"
       ],
@@ -94,11 +34,11 @@
     {
       "category": "PC",
       "brand": "CIO",
-      "name": "USB Type-C to Type-C フFlex Spiral Cable 1m",
+      "name": "USB Type-C to Type-C Flex Spiral Cable 1m",
       "price": 1780,
       "purchaseDate": "2026-03-04",
       "status": "active",
-      "memo": "USB Type-C to C 1m ブラック\n240W PD3.1 急速充電\n480Mbps データ転送",
+      "memo": "CIO-FLSC-CC1 1m ブラック\n240W PD3.1 急速充電\n480Mbps データ転送",
       "tags": [
         "USBケーブル"
       ],
@@ -2859,6 +2799,9 @@
     }
   ],
   "favOrder": [
+    "1772698221797",
+    "1772697435522",
+    "1772696632316",
     "2",
     "1770185693227",
     "20",
@@ -2880,15 +2823,10 @@
     "54",
     "1770085238387",
     "1770083627281",
-    "1772698221797",
-    "1772696632316",
-    "1772697435522",
-    "1772701980676",
     "26",
     "1770051991583",
     "64",
     "65",
-    "1772702699770",
     "70",
     "66",
     "67",

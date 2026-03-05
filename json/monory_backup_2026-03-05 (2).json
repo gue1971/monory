@@ -3,6 +3,51 @@
   "items": [
     {
       "category": "PC",
+      "brand": "エレコム",
+      "name": "コンパクト10口タップ ECT-15シリーズ",
+      "price": 1953,
+      "purchaseDate": "2022-07-13",
+      "status": "active",
+      "memo": "ECT-1530BK ブラック\n10個口 差し込み口2面 3m\nマグネット ほこりシャッター付 スイングプラグ\n雷ガード 一括スイッチ",
+      "tags": [
+        "電源タップ"
+      ],
+      "imageUrl": "images/ECT-1530BK_01.jpeg",
+      "id": "1772701980676",
+      "favorite": false
+    },
+    {
+      "category": "PC",
+      "brand": "LpoieJun.HH",
+      "name": "USB 3.2 Gen 2x2 Type-Cケーブル 3m",
+      "price": 1999,
+      "purchaseDate": "2022-07-13",
+      "status": "archived",
+      "memo": "3m L字 網組ナイロン ブラック\n20Gbps 超高速データ転送\nPD3.0/GD3.0 100w(20V/5A) 急速充電\n4K 60Hz 映像出力\nE-Markerチップ搭載",
+      "tags": [
+        "USBケーブル"
+      ],
+      "imageUrl": "images/lpoie.jpeg",
+      "id": "1772701451844",
+      "favorite": false
+    },
+    {
+      "category": "PC",
+      "brand": "LpoieJun.HH",
+      "name": "USB 3.2 Gen 2x2 Type-Cケーブル 1m",
+      "price": 1499,
+      "purchaseDate": "2022-07-13",
+      "status": "archived",
+      "memo": "1m L字 網組ナイロン ブラック\n20Gbps 超高速データ転送\nPD3.0/GD3.0 100w(20V/5A) 急速充電\n4K 60Hz 映像出力 E-Markerチップ搭載",
+      "tags": [
+        "USBケーブル"
+      ],
+      "imageUrl": "images/lpoie.jpeg",
+      "id": "1772701285448",
+      "favorite": false
+    },
+    {
+      "category": "PC",
       "brand": "CIO",
       "name": "USB-C マグネット変換アダプタ",
       "price": 1330,
