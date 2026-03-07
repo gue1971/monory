@@ -2,21 +2,6 @@
   "version": 2,
   "items": [
     {
-      "category": "AV",
-      "brand": "Hyper X",
-      "name": "SOLOCAST 2",
-      "price": 7630,
-      "purchaseDate": "2026-03-06",
-      "status": "active",
-      "memo": "SKU: AR0A0AA\nビット深度: 24-bit16-bit\n要素: 14 mmエレクトレットコンデンサーカプセル×1\n極性パターン: カーディオイド\nサンプリングレート: 96 kHz; 48kHz; 44.1kHz\n感度（マイク）: -7.8±3 dB(1 V/Pa、1 kHz時)\n重量: 368g",
-      "tags": [
-        "マイク"
-      ],
-      "imageUrl": "images/solocast2.jpeg",
-      "id": "1772896272665",
-      "favorite": true
-    },
-    {
       "category": "PC",
       "brand": "FILCO",
       "name": "Animal Free Leather Macaron Black Lサイズ",
@@ -98,7 +83,7 @@
       "price": 1330,
       "purchaseDate": "2026-03-04",
       "status": "active",
-      "memo": "CIO-MGCT-CC\nUSB-C(メス) to USB-C(オス) L字 ブラック\nPD3.1 最大240W（48V/5A）\nUSB2.0 480Mbps 映像非対応\n3個購入",
+      "memo": "CIO-MGCT-CC\nUSB-C(メス) to USB-C(オス) L字 ブラック\nPD3.1 最大240W（48V/5A）\nUSB2.0 480Mbps 映像非対応\n2個購入",
       "tags": [
         "アダプタ"
       ],
@@ -2917,7 +2902,6 @@
     "1772701980676",
     "26",
     "1770051991583",
-    "1772896272665",
     "64",
     "65",
     "1772702699770",
