@@ -2,21 +2,6 @@
   "version": 2,
   "items": [
     {
-      "category": "服飾品",
-      "brand": "STRDEOUT",
-      "name": "2ベルトコルクサンダル",
-      "price": 3850,
-      "purchaseDate": "2026-04-08",
-      "status": "active",
-      "memo": "39 [24.5cm 3E] BLACK\nBIRKENSTOCKのアリゾナ風",
-      "tags": [
-        "サンダル"
-      ],
-      "imageUrl": "images/ari.jpeg",
-      "id": "1775805665488",
-      "favorite": true
-    },
-    {
       "category": "AV",
       "brand": "Hyper X",
       "name": "SOLOCAST 2",
@@ -1752,13 +1737,13 @@
       "name": "Arisona Birko-Flor ブラック",
       "price": 8800,
       "purchaseDate": "2022-04-25",
-      "status": "disposed",
-      "memo": "Black 24.5cm\n2026/4/10廃棄",
+      "status": "active",
+      "memo": "Black 24.5cm",
+      "imageUrl": "images/arisonabirko.jpeg",
       "tags": [
         "サンダル"
       ],
-      "imageUrl": "images/arisonabirko.jpeg",
-      "favorite": false,
+      "favorite": true,
       "id": "75"
     },
     {
@@ -2943,7 +2928,7 @@
     "80",
     "81",
     "73",
-    "1775805665488",
+    "75",
     "76",
     "1770050889387",
     "1770051343587",
