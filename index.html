@@ -67,6 +67,8 @@
         /** @jsx React.createElement */
         /** @jsxFrag React.Fragment */
         const { useState, useMemo, useEffect, useRef } = React;
+        const INITIAL_DATA_REVISION = '2026-08-06-1';
+        const INITIAL_DATA_REVISION_KEY = 'monory_initial_data_revision';
 
         // --- Icons ---
         const IconBase = ({ size = 24, className = "", children }) => (
@@ -589,7 +591,9 @@
             // --- Load Data Logic ---
             const loadDataFromJson = async (forceUpdate = false) => {
                 try {
-                    const response = await fetch('./json/data.json');
+                    const response = await fetch(`./json/data.json?v=${encodeURIComponent(INITIAL_DATA_REVISION)}`, {
+                        cache: 'no-store'
+                    });
                     if (response.ok) {
                         const data = await response.json();
                         // Handle Items
@@ -597,6 +601,7 @@
                         setItems(loadedItems);
                         // Save to localStorage so it persists
                         localStorage.setItem('monory_data', JSON.stringify(loadedItems));
+                        localStorage.setItem(INITIAL_DATA_REVISION_KEY, INITIAL_DATA_REVISION);
 
                         // Handle FavOrder from JSON if exists
                         if (!Array.isArray(data) && Array.isArray(data.favOrder)) {
@@ -626,7 +631,10 @@
                     // 1. Try LocalStorage
                     const saved = localStorage.getItem('monory_data');
                     const savedFavOrder = localStorage.getItem('monory_fav_order');
-                    if (saved) {
+                    const savedRevision = localStorage.getItem(INITIAL_DATA_REVISION_KEY);
+                    const shouldRefreshFromJson = savedRevision !== INITIAL_DATA_REVISION;
+
+                    if (saved && !shouldRefreshFromJson) {
                         try {
                             const parsed = JSON.parse(saved);
                             // monory_data の将来拡張（{items, favOrder} 形式）にも対応
@@ -649,7 +657,7 @@
                         }
                     }
                     
-                    // 2. If no LocalStorage, load from JSON
+                    // 2. If no LocalStorage or initial data revision changed, load from JSON
                     await loadDataFromJson();
                     setIsLoading(false);
                 };
